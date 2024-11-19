@@ -159,25 +159,21 @@
 
       .highlighted {
         background-color: rgb(0, 153, 255);
+        color: rgba(0, 0, 0, 0.6);
       }
 
-      /* Positioning the div at the bottom */
-      .pageChangerContainer {
+      #loadMore {
+        /* position: fixed; */
         /* position: absolute; */
-        /* position: relative; */
-        /* bottom: 20px; 20px from the bottom */
-        /* left: 50%; */
-        /* transform: translateX(-50%); Center horizontally */
+        /* bottom: 0; */
+
         display: flex;
-        /* align-items: center; */
-        /* justify-content: center; */
-        /* gap: 10px; Space between buttons */
         background-color: rgba(0, 0, 0, 0.5);
         padding: 10px 20px;
         border-radius: 10px;
       }
 
-      .pageChangerContainer button {
+      #loadMore button {
         background-color: #4caf50;
         color: white;
         border: none;
@@ -188,7 +184,7 @@
         transition: background-color 0.3s ease;
       }
 
-      .pageChangerContainer button:hover {
+      #loadMore button:hover {
         background-color: #45a049;
       }
     </style>
@@ -205,12 +201,24 @@
         <select id="ratio-filter">
           <option value="">All</option>
         </select>
+        <label for="minDate">Min Date:</label>
+        <input type="date" id="minDate" class="date-input" />
+
+        <label for="maxDate">Max Date:</label>
+        <input type="date" id="maxDate" class="date-input" />
+
+        <label for="path-filter">Path:</label>
+        <select id="path-filter">
+          <option value="">All</option>
+        </select>
       </div>
 
       <input type="text" id="search-bar" placeholder="Search for captions..." />
 
       <div id="keywordsToSearch"></div>
-      <div id="pageVideoCount"></div>
+
+      <label id="pageVideoCount">hi</label>
+
       <table>
         <thead>
           <tr>
@@ -253,7 +261,6 @@
       </table>
     </div>
 
-    <!-- Edit Keywords Modal -->
     <div class="modal-overlay"></div>
     <div class="edit-keywords-modal">
       <h3>Edit Keywords</h3>
@@ -264,14 +271,14 @@
       <button id="cancel-edit-btn">Back</button>
     </div>
 
-    <div class="pageChangerContainer">
-      <button id="prevPage">Previous</button>
-      <span id="pageIndex"></span>
-      <button id="nextPage">Next</button>
+    <div id="loadMore">
+      <!-- <button id="prevPage">Previous</button> -->
+      <!-- <span id="pageIndex"></span> -->
+      <!-- <button id="nextPage">Next</button> -->
     </div>
 
     <script>
-      const MAX_VIDEOS_PER_PAGE = 400;
+      let MAX_VIDEOS_PER_PAGE = 100;
 
       const FLIP_THROUGH_INTERVAL = 270;
       const searchBar = document.getElementById("search-bar");
@@ -285,9 +292,12 @@
       const fpsFilter = document.getElementById("fps-filter");
       const ratioFilter = document.getElementById("ratio-filter");
 
+      const minDateInput = document.getElementById("minDate");
+      const maxDateInput = document.getElementById("maxDate");
+      const pageVideoCount = document.getElementById("pageVideoCount");
+
       const uniqueFps = new Set();
       const uniqueRatios = new Set();
-      let sortDirection = {};
       let currentEditVideo = null;
       let keywordsToSearchList = [];
 
@@ -295,18 +305,55 @@
       let lastDownX = 0;
       let currentTh;
 
-      let videosToDisplay = videoKeywords.videos;
-
       let indexVideoPage = 0;
+      const THUMBNAIL_INDEX = 1;
+
+      let sortSettings = { sortBy: null, isAscending: true };
 
       function main() {
-        fillFPSAndRatioDropdownFilters();
-        displayVideos();
+        setup();
+        updateVideosDisplayed();
+      }
+
+      function setup() {
+        sortSettings.sortBy = "date";
+        sortSettings.isAscending = false;
+
+        minDateInput.value = "2007-01-01";
+        maxDateInput.value = new Date().toISOString().split("T")[0];
+        minDateInput.addEventListener("change", updateVideosDisplayed);
+        maxDateInput.addEventListener("change", updateVideosDisplayed);
+
+        const rootPaths = new Set();
+        const videos = videoKeywords.videos;
+        for (let i = 0; i < videos.length; i++) {
+          const video = videos[i];
+
+          const relativePath = video.path.replace(
+            "V:\\zentrale-einrichtungen\\Kommunikation u. Marketing\\Marketing\\Videos\\",
+            ""
+          );
+          const rootPath = relativePath.split("\\")[0];
+
+          if (rootPath.indexOf(".") == -1) {
+            rootPaths.add(rootPath);
+          }
+        }
+
+        document.getElementById(
+          "path-filter"
+        ).innerHTML = `<option value="">All</option>${Array.from(rootPaths)
+          .map((rootPath) => `<option value="${rootPath}">${rootPath}</option>`)
+          .join("")}`;
+
         document
-          .getElementById("prevPage")
-          .addEventListener("click", previousPage);
-        document.getElementById("nextPage").addEventListener("click", nextPage);
-        updatePageDisplay();
+          .getElementById("path-filter")
+          .addEventListener("change", function () {
+            updateVideosDisplayed();
+          });
+
+        fillFPSAndRatioAndMinMaxDateDropdownFilters();
+        setupLoadMoreOnView();
 
         document
           .getElementById("add-keyword-btn")
@@ -316,7 +363,7 @@
               currentEditVideo.keywords.push(newKeyword);
               newKeywordInput.value = "";
               openEditKeywordsModal(currentEditVideo);
-              displayVideos();
+              updateVideosDisplayed();
             }
           });
 
@@ -338,12 +385,13 @@
 
         tableHeaders.forEach((header) => {
           header.addEventListener("click", () => {
-            const sortKey = header.getAttribute("data-sort");
-            filterAndSortVideos(sortKey);
+            const sortHeader = header.getAttribute("data-sort");
+            sortSettings.sortBy = sortHeader;
+            sortSettings.isAscending = !sortSettings.isAscending;
+
+            updateVideosDisplayed();
           });
         });
-
-        searchBar.addEventListener("input", onSearchBarInput);
 
         searchBar.addEventListener("keydown", (event) => {
           if (event.key === "Enter") {
@@ -356,10 +404,15 @@
           }
         });
 
-        fpsFilter.addEventListener("change", onChangedFpsFilter);
-        ratioFilter.addEventListener("change", onChangedRatioFilter);
+        fpsFilter.addEventListener("change", function () {
+          ratioFilter.value = "";
+          updateVideosDisplayed();
+        });
 
-        filterAndSortVideos();
+        ratioFilter.addEventListener("change", function () {
+          fpsFilter.value = "";
+          updateVideosDisplayed();
+        });
 
         document.querySelectorAll("th").forEach((th) => {
           const handle = th.querySelector(".resize-handle");
@@ -385,8 +438,309 @@
         });
       }
 
-      function fillFPSAndRatioDropdownFilters() {
+      let loadingMore = false;
+
+      function setupLoadMoreOnView() {
+        window.addEventListener("scroll", function (event) {
+          const element = document.getElementById("loadMore");
+          if (isVisible(element)) {
+            nextPage();
+            console.log("Visible, load more");
+            loadingMore = true;
+          }
+        });
+      }
+
+      function requestToLoadMore() {
+        if (!loadingMore) {
+          loadingMore = true;
+        }
+      }
+
+      function isVisible(ele) {
+        const { top, bottom } = ele.getBoundingClientRect();
+        const vHeight =
+          window.innerHeight || document.documentElement.clientHeight;
+
+        return (top > 0 || bottom > 0) && top < vHeight;
+      }
+
+      let globalFilteredVideos = [];
+
+      function updateVideosDisplayed() {
+        let allVideos = getAllVideos();
+        sortedVideos = sortVideos(allVideos);
+
+        const startTime = performance.now();
+        globalFilteredVideos = filterVideos(sortedVideos, false);
+        const endTime = performance.now();
+
+        const reduceVideos = globalFilteredVideos.slice(
+          0,
+          (indexVideoPage + 1) * MAX_VIDEOS_PER_PAGE
+        );
+
+        pageVideoCount.innerHTML = `Displaying ${reduceVideos.length} out of ${globalFilteredVideos.length} videos`;
+
+        const startTimeDisplay = performance.now();
+        displayVideos(reduceVideos);
+        const endTimeDisplay = performance.now();
+      }
+
+      function getMatchedKeyword(videoKeyword) {
+        for (const keywordInSearch of keywordsToSearchList) {
+          if (videoKeyword.includes(keywordInSearch)) {
+            return keywordInSearch;
+          }
+        }
+      }
+
+      function generateKeywordsHtml(keywords) {
+        return keywords
+          .map((keyword) => {
+            const matchedKeyword = getMatchedKeyword(keyword);
+            let highlight = "";
+
+            if (matchedKeyword != null) {
+              keyword = keyword.replace(
+                matchedKeyword,
+                `<span style="color:white" >${matchedKeyword}</span>`
+              );
+
+              highlight = "highlighted";
+            }
+
+            return `<span class="keyword-capsule ${highlight}">${keyword}</span>`;
+          })
+          .join("");
+      }
+
+      function keywordIsInVideoPath(video, keyword) {
+        return video.path.toLowerCase().includes(keyword.toLowerCase());
+      }
+
+      function videoMatchesSearch(video) {
+        let matchesSearch = false;
+
+        for (const keywordInSearch of keywordsToSearchList) {
+          for (const keywordVideo of video.keywords) {
+            if (keywordVideo.includes(keywordInSearch)) {
+              matchesSearch = true;
+              break;
+            }
+          }
+
+          if (keywordIsInVideoPath(video, keywordInSearch)) {
+            matchesSearch = true;
+          }
+        }
+
+        if (keywordsToSearchList.length == 0) {
+          matchesSearch = true;
+        }
+
+        return matchesSearch;
+      }
+
+      function filterVideos(videos, shouldStopEarly = true) {
+        const startTime = performance.now();
+
+        const fpsValue = fpsFilter.value;
+        const ratioValue = ratioFilter.value;
+        const pathValue = document.getElementById("path-filter").value;
+
+        const minDate = document.getElementById("minDate").value;
+        const maxDate = document.getElementById("maxDate").value;
+
+        const matchedVideos = [];
+
+        let stopedEarly = -1;
+
+        for (let i = 0; i < videos.length; i++) {
+          if (shouldStopEarly) {
+            if (
+              globalFilteredVideos.length >=
+              MAX_VIDEOS_PER_PAGE * (indexVideoPage + 1)
+            ) {
+              stopedEarly = i;
+              break;
+            }
+          }
+
+          const video = videos[i];
+
+          let hasKeyword = videoMatchesSearch(video);
+
+          let videoFPS;
+          let videoRatio;
+          let videoDate;
+
+          if (video.metadata == null) {
+            videoFPS = "unknown";
+            videoRatio = "unknown";
+            videoDate = "unknown";
+          } else {
+            videoFPS = video.metadata.fps;
+            videoRatio = video.metadata.ratio;
+            videoDate = new Date(video.metadata.media_time_created);
+          }
+
+          const matchesFps = fpsValue === "" || videoFPS == fpsValue;
+          const matchesRatio = ratioValue === "" || videoRatio == ratioValue;
+          const matchesPath =
+            pathValue === "" ||
+            video.path
+              .replace(
+                "V:\\zentrale-einrichtungen\\Kommunikation u. Marketing\\Marketing\\Videos\\",
+                ""
+              )
+              .split("\\")[0] == pathValue;
+
+          const searchingForUnknowns =
+            fpsValue === "unknown" || ratioValue === "unknown";
+          const isInDateRange =
+            (videoDate >= new Date(minDate) &&
+              videoDate <= new Date(maxDate)) ||
+            (searchingForUnknowns && videoDate == "unknown");
+
+          if (
+            hasKeyword &&
+            matchesFps &&
+            matchesRatio &&
+            isInDateRange &&
+            matchesPath
+          ) {
+            matchedVideos.push(video);
+          }
+        }
+
+        return matchedVideos;
+      }
+
+      function sortVideos(videosToSort) {
+        const sortKey = sortSettings.sortBy;
+
+        const isAscending = sortSettings.isAscending;
+
+        videosToSort.sort((a, b) => {
+          if (a.metadata == null && b.metadata == null) {
+            return 0;
+          }
+          if (a.metadata == null) {
+            return 1;
+          }
+          if (b.metadata == null) {
+            return -1;
+          }
+          if (sortKey === "date") {
+            return (
+              (new Date(a.metadata.media_time_created) -
+                new Date(b.metadata.media_time_created)) *
+              (isAscending ? 1 : -1)
+            );
+          } else if (sortKey === "length") {
+            return (
+              (a.metadata.video_length - b.metadata.video_length) *
+              (isAscending ? 1 : -1)
+            );
+          } else if (sortKey === "size") {
+            return (
+              (a.metadata.file_size - b.metadata.file_size) *
+              (isAscending ? 1 : -1)
+            );
+          } else if (sortKey === "fps") {
+            return (a.metadata.fps - b.metadata.fps) * (isAscending ? 1 : -1);
+          } else if (sortKey === "ratio") {
+            return (
+              a.metadata.ratio.localeCompare(b.metadata.ratio) *
+              (isAscending ? 1 : -1)
+            );
+          }
+        });
+
+        return videosToSort;
+      }
+      function displayVideos(videos) {
+        const clearVideos = true;
+        if (clearVideos) {
+          videoResults.innerHTML = "";
+        }
+
+        if (videos.length > 0) {
+          videos.forEach((video) => {
+            const row = createVideoRow(video);
+            videoResults.appendChild(row);
+          });
+        } else {
+          displayNoResultsMessage();
+        }
+      }
+
+      function resetPage() {
+        indexVideoPage = 0;
+
+        updateVideosDisplayed();
+      }
+
+      function nextPage() {
+        if (
+          indexVideoPage * MAX_VIDEOS_PER_PAGE >=
+          globalFilteredVideos.length
+        ) {
+          console.log("No more videos to display.");
+          return;
+        }
+
+        console.log("Next page");
+        console.log(
+          "Current index",
+          indexVideoPage,
+          globalFilteredVideos.length,
+          MAX_VIDEOS_PER_PAGE,
+          MAX_VIDEOS_PER_PAGE * (indexVideoPage + 1)
+        );
+        indexVideoPage++;
+
+        updateVideosDisplayed();
+      }
+      function previousPage() {
+        if (indexVideoPage === 0) {
+          console.log("Already at the first page.");
+          return;
+        }
+
+        indexVideoPage--;
+
+        updateVideosDisplayed();
+      }
+
+      function fillFPSAndRatioAndMinMaxDateDropdownFilters() {
         const videos = videoKeywords.videos;
+
+        const maxDate = new Date(
+          Math.max.apply(
+            null,
+            videos.map((video) =>
+              video.metadata == null
+                ? new Date(0)
+                : new Date(video.metadata.media_time_created)
+            )
+          )
+        );
+
+        const minDate = new Date(
+          Math.min.apply(
+            null,
+            videos.map((video) =>
+              video.metadata == null
+                ? new Date()
+                : new Date(video.metadata.media_time_created)
+            )
+          )
+        );
+        minDateInput.value = minDate.toISOString().split("T")[0];
+        maxDateInput.value = maxDate.toISOString().split("T")[0];
+
         for (let i = 0; i < videos.length; i++) {
           const video = videos[i];
           if (video.metadata == null) {
@@ -397,14 +751,22 @@
           uniqueRatios.add(video.metadata.ratio);
         }
 
-        fpsFilter.innerHTML = `<option value="">All</option>${Array.from(
-          uniqueFps
-        )
+        const orderedFps = Array.from(uniqueFps).sort((b, a) => a - b);
+
+        const orderedRatios = Array.from(uniqueRatios).sort((b, a) => {
+          const aSplit = a.split(":");
+          const bSplit = b.split(":");
+          if (aSplit.length == 2 && bSplit.length == 2) {
+            return aSplit[0] + aSplit[1] - (bSplit[0] + bSplit[1]);
+          } else {
+            return a.localeCompare(b);
+          }
+        });
+
+        fpsFilter.innerHTML = `<option value="">All</option>${orderedFps
           .map((fps) => `<option value="${fps}">${fps}</option>`)
           .join("")}<option value="unknown">unknown</option>`;
-        ratioFilter.innerHTML = `<option value="">All</option>${Array.from(
-          uniqueRatios
-        )
+        ratioFilter.innerHTML = `<option value="">All</option>${orderedRatios
           .map((ratio) => `<option value="${ratio}">${ratio}</option>`)
           .join("")}<option value="unknown">unknown</option>`;
       }
@@ -420,118 +782,30 @@
         document.body.removeChild(tempInput);
       }
 
-      function updatePageDisplay() {
-        pageIndex.innerHTML = indexVideoPage + 1;
-        if (indexVideoPage === 0) {
-          prevPage.disabled = true;
-        } else {
-          prevPage.disabled = false;
-        }
-
-        if (
-          (indexVideoPage + 1) * MAX_VIDEOS_PER_PAGE >=
-          videosToDisplay.length
-        ) {
-          nextPage.disabled = true;
-        } else {
-          nextPage.disabled = false;
-        }
-      }
-
-      function resetPage() {
-        indexVideoPage = 0;
-        updatePageDisplay();
-      }
-
-      function nextPage() {
-        console.log("Next page");
-        if (indexVideoPage * MAX_VIDEOS_PER_PAGE >= videosToDisplay.length) {
-          console.log("No more videos to display.");
-          return;
-        }
-
-        indexVideoPage++;
-        updatePageDisplay();
-        displayVideos();
-      }
-      function previousPage() {
-        if (indexVideoPage === 0) {
-          console.log("Already at the first page.");
-          return;
-        }
-
-        indexVideoPage--;
-        updatePageDisplay();
-        displayVideos();
-      }
-
       function getAllVideos() {
         return videoKeywords.videos;
       }
 
-      function getVideosToDisplay() {
-        const videosToReturn =
-          videosToDisplay.length > MAX_VIDEOS_PER_PAGE
-            ? videosToDisplay.slice(
-                indexVideoPage * MAX_VIDEOS_PER_PAGE,
-                (indexVideoPage + 1) * MAX_VIDEOS_PER_PAGE
-              )
-            : videosToDisplay;
-
-        pageVideoCount.innerHTML = `Displaying ${videosToReturn.length} of ${videosToDisplay.length} videos`;
-
-        return videosToReturn;
-      }
-
-      function setVideos(videos) {
-        videosToDisplay = videos;
-      }
-
-      function setVideosAll() {
-        videosToDisplay = videoKeywords.videos;
-
-        resetPage();
-      }
-
-      function displayVideos(clearVideos = true) {
-        const videos = getVideosToDisplay();
-
-        if (clearVideos) {
-          videoResults.innerHTML = "";
-        }
-
-        if (videos.length > 0) {
-          videos.forEach((video) => {
-            const row = createVideoRow(video);
-            videoResults.appendChild(row);
-          });
-        } else {
-          displayNoResultsMessage();
-        }
-      }
-
       function createVideoRow(video) {
         const row = document.createElement("tr");
-        const filePath = video.path;
+
         const thumbnails = video.thumbnails;
-        const fileName = extractFileName(filePath);
+
         const keywordsHtml = generateKeywordsHtml(video.keywords);
         const metadataHtml = generateMetadataHtml(video.metadata);
 
+        const pathHTML = generatePathHTML(video);
+
         row.innerHTML = `
     <td><img src="${getThumbnailPathRelative(
-      thumbnails[0]
-    )}" alt="${fileName}" class="thumbnail"></td>
-    <td><div class="pathDisplay">${getPathForOs(
-      filePath,
-      false,
-      true
-    )}</div><div class="keywordsContainer">${keywordsHtml}</div></td>
+      thumbnails[THUMBNAIL_INDEX]
+    )}" class="thumbnail"></td>
+    <td>${pathHTML}<div class="keywordsContainer">${keywordsHtml}</div></td>
     <td><button class="edit-keywords-btn">Edit</button></td>
     ${metadataHtml}
   `;
 
-        setupRowEventListeners(row, video, filePath, thumbnails);
+        setupRowEventListeners(row, video, video.path, thumbnails);
 
         return row;
       }
@@ -540,15 +814,26 @@
         return filePath.split("\\").pop();
       }
 
-      function generateKeywordsHtml(keywords) {
-        return keywords
-          .map((keyword) => {
-            const highlight = searchMatchesKeyword(keyword)
-              ? "highlighted"
-              : "";
-            return `<span class="keyword-capsule ${highlight}">${keyword}</span>`;
-          })
-          .join("");
+      function generatePathHTML(video) {
+        let path = getPathForOs(video.path, false);
+
+        const div = document.createElement("div");
+        let highlighted = "";
+        for (const keywordInSearch of keywordsToSearchList) {
+          if (keywordIsInVideoPath(video, keywordInSearch)) {
+            highlighted = "highlighted";
+            const regex = new RegExp(keywordInSearch, "gi");
+
+            path = path.replace(regex, (match) => {
+              return `<span style="color:white">${match}</span>`;
+            });
+
+            break;
+          }
+        }
+
+        const pathHTML = `<div class="pathDisplay ${highlighted}">${path}</div>`;
+        return pathHTML;
       }
 
       function generateMetadataHtml(metadata) {
@@ -566,14 +851,13 @@
       <td>${metadata.video_length.toFixed(2)}</td>
       <td>${(metadata.file_size / (1024 * 1024)).toFixed(2)}</td>
       <td>${metadata.ratio}</td>
-      <td>${metadata.fps}</td>
+      <td>${metadata.fps.toFixed(2)}</td>
     `;
         }
       }
 
       function getThumbnailPathRelative(thumbnailPath) {
         if (!thumbnailPath) {
-          console.log("Thumbnail path is null");
           return "static/no_image_placeholder.png";
         }
 
@@ -607,13 +891,17 @@
           .querySelector(".keywordsContainer")
           .addEventListener("click", (event) => {
             const keyword = event.target.innerText;
-            toggleKeyword(keyword);
-            console.log("Clicked on keyword:", keyword);
+            if (
+              event.target.classList.contains("keyword-capsule") ||
+              event.target.parentElement.classList.contains("keyword-capsule")
+            ) {
+              toggleKeyword(keyword);
+            }
           });
       }
 
       function setupThumbnailHover(row, thumbnails) {
-        let currentThumbnailIndex = 0;
+        let currentThumbnailIndex = THUMBNAIL_INDEX;
         let interval;
 
         const thumbnail = row.querySelector(".thumbnail");
@@ -629,7 +917,7 @@
 
         thumbnail.addEventListener("mouseleave", function () {
           clearInterval(interval);
-          this.src = getThumbnailPathRelative(thumbnails[0]);
+          this.src = getThumbnailPathRelative(thumbnails[THUMBNAIL_INDEX]);
           currentThumbnailIndex = 0;
         });
       }
@@ -700,7 +988,7 @@
           btn.addEventListener("click", (e) => {
             const index = e.target.getAttribute("data-index");
             video.keywords.splice(index, 1);
-            displayVideos();
+            updateVideosDisplayed();
             openEditKeywordsModal(video);
           });
         });
@@ -718,95 +1006,6 @@
         return navigator.userAgent.toLowerCase().includes("windows");
       }
 
-      function searchMatchesKeyword(videoKeyword) {
-        for (const keywordInSearch of keywordsToSearchList) {
-          if (videoKeyword.includes(keywordInSearch)) {
-            return true;
-          }
-        }
-      }
-
-      function filterAndSortVideos(sortKey = null) {
-        const fpsValue = fpsFilter.value;
-        const ratioValue = ratioFilter.value;
-        setVideosAll();
-        let matchedVideos = getAllVideos().filter((video) => {
-          let hasKeyword = false;
-
-          for (const keywordVideo of video.keywords) {
-            if (searchMatchesKeyword(keywordVideo)) {
-              hasKeyword = true;
-
-              break;
-            }
-          }
-
-          if (keywordsToSearchList.length == 0) {
-            hasKeyword = true;
-          }
-
-          if (video.metadata == null) {
-            if (fpsValue == "unknown" || ratioValue == "unknown") {
-              return hasKeyword;
-            } else {
-              return false;
-            }
-          }
-
-          let matchesFps = fpsValue === "" || video.metadata.fps == fpsValue;
-          let matchesRatio =
-            ratioValue === "" || video.metadata.ratio === ratioValue;
-
-          return hasKeyword && matchesFps && matchesRatio;
-        });
-
-        setVideos(matchedVideos);
-        if (sortKey) {
-          sortVideos(sortKey);
-        }
-        displayVideos();
-      }
-
-      function sortVideos(sortKey) {
-        const isAscending = sortDirection[sortKey] || false;
-        getVideosToDisplay().sort((a, b) => {
-          if (a.metadata == null || b.metadata == null) {
-            return 0;
-          }
-          if (sortKey === "date") {
-            return (
-              (new Date(a.metadata.media_time_created) -
-                new Date(b.metadata.media_time_created)) *
-              (isAscending ? 1 : -1)
-            );
-          } else if (sortKey === "length") {
-            return (
-              (a.metadata.video_length - b.metadata.video_length) *
-              (isAscending ? 1 : -1)
-            );
-          } else if (sortKey === "size") {
-            return (
-              (a.metadata.file_size - b.metadata.file_size) *
-              (isAscending ? 1 : -1)
-            );
-          } else if (sortKey === "fps") {
-            return (a.metadata.fps - b.metadata.fps) * (isAscending ? 1 : -1);
-          } else if (sortKey === "ratio") {
-            return (
-              a.metadata.ratio.localeCompare(b.metadata.ratio) *
-              (isAscending ? 1 : -1)
-            );
-          }
-        });
-        sortDirection[sortKey] = !isAscending;
-      }
-
-      function onSearchBarInput() {
-        if (searchBar.value.length >= 3) {
-          filterAndSortVideos();
-        }
-      }
-
       function addToKeywordsToSearch(keyword) {
         keywordsToSearchList.push(keyword);
 
@@ -820,7 +1019,7 @@
         button.onclick = function () {
           this.parentElement.remove();
           removeFromKeywordsToSearch(keyword);
-          filterAndSortVideos();
+          updateVideosDisplayed();
         };
         div.appendChild(button);
 
@@ -828,7 +1027,7 @@
 
         searchBar.value = "";
 
-        filterAndSortVideos();
+        updateVideosDisplayed();
       }
 
       function removeFromKeywordsToSearch(keyword) {
@@ -845,7 +1044,7 @@
           }
         }
 
-        filterAndSortVideos();
+        updateVideosDisplayed();
       }
 
       function toggleKeyword(keyword) {
@@ -856,15 +1055,6 @@
         }
       }
 
-      function onChangedFpsFilter() {
-        ratioFilter.value = "";
-        filterAndSortVideos();
-      }
-
-      function onChangedRatioFilter() {
-        fpsFilter.value = "";
-        filterAndSortVideos();
-      }
       main();
     </script>
   </body>
