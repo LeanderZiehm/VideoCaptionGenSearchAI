@@ -9,6 +9,17 @@ from datetime import datetime
 import ollama
 import re
 import logging
+import numpy as np
+# import pytesseract
+import easyocr
+
+reader = easyocr.Reader(["de","en"])
+
+# modelName = "minicpm-v"
+# modelName = "llama3.2-vision"
+modelName = "llava"
+
+
 
 tookLoadTime = time.time() - initTime
 print(f"Load Time: {tookLoadTime}")
@@ -21,8 +32,9 @@ logging.basicConfig(
     datefmt="%Y-%m-%d %H:%M:%S",
 )
 
+OVERRIED_EXISTING = False #False
 skip_AI = False
-MAX_VIDEO_COUNT = 1000000000
+MAX_VIDEO_COUNT = -1
 MAX_SCENE_COUNT = 5
 
 
@@ -34,20 +46,25 @@ PROCESSED_PATH = "static/processed/"
 
 
 def main():
-    """Main function to process videos, generate captions, and save to a JS file."""
-
     loadedJsonData = loadJsonData()
     processedVideoCount = 0
     skippedVideoCount = 0
     errors = []
+    
+    stopEarly = False
 
     for subdir, _, files in os.walk(VIDEO_FOLDER):
         print(f"Folder: {subdir}")
+
+        if stopEarly:
+            break
+        
         for file in files:
-            if processedVideoCount >= MAX_VIDEO_COUNT:
+            if (processedVideoCount >= MAX_VIDEO_COUNT) and (MAX_VIDEO_COUNT != -1):
                 print(
                     f"[{MAX_VIDEO_COUNT} processed. Stopping because it's the MAX_VIDEO_COUNT.]"
                 )
+                stopEarly = True
                 break
 
             if any(file.lower().endswith(ext) for ext in video_formats):
@@ -75,7 +92,17 @@ def main():
 
                 processedVideoCount += 1
 
-        print(f"skippedVideoCount: {skippedVideoCount}")
+    print(f"skippedVideoCount: {skippedVideoCount}")
+
+
+    # loadedJsonData['uniqueMetadata'] = calculateUniqueMetadata(loadedJsonData['videos'])
+    
+    # print(loadedJsonData['uniqueMetadata'])
+    # print(loadedJsonData)
+    # saveToJsFile(loadedJsonData)
+    
+    
+    # print('Unique Metadata: ', loadedJsonData['uniqueMetadata'])
 
     print(f"Processed {processedVideoCount} videos.")
     print(f"Erorrs: {errors}")
@@ -84,22 +111,52 @@ def main():
 
     print(f"Total Time: {time.time() - initTime}")
 
+# def calculateUniqueMetadata(videos):
+#     uniqueMetadata = {}
+#     metadataKeys = ["ratio", "fps", "video_length", "file_size"]
+#     for video in videos:
+#         metadata = video["metadata"]
+#         if metadata is not None:
+#             for key in metadataKeys:
+#                 if key not in uniqueMetadata:
+#                     uniqueMetadata[key] = []
+#                     print("new key added", key)
+#                 if metadata[key] not in uniqueMetadata[key]:
+#                     uniqueMetadata[key].append(metadata[key])
+                
+#                 print(f"Unique Metadata: {key} - {metadata[key]}")
+    
+#     return uniqueMetadata
+
+def extract_text(image_path):
+    result = reader.readtext(image_path, detail=0)
+    # print(result)
+    return result
+
+
 
 def processVideo(video_path):
     scene_frames_paths = extract_equally_spaced_frames(video_path, MAX_SCENE_COUNT)
     print(f"Scene Frames: {scene_frames_paths}")
     keywords = set()
+    ocrs = set()
     for frame_path in scene_frames_paths:
-        print(f"###{frame_path}###")
+        print(f"\n###{frame_path}###")
         generatedKeywords = generate_keywords(frame_path)
-        print(f"Generated Keywords: {generatedKeywords}")
+        # print(f"Generated Keywords: {generatedKeywords}")
+
+        # ocr = f'"{extract_text(frame_path)}"'
+        # keywords.update(ocr)
         keywords.update(generatedKeywords)
 
-    print("...")
+        ocrs.update(extract_text(frame_path))
+
+    # print("...")
     metadata = getMetadata(video_path)
     processedVideoData = {
         "path": video_path,
         "keywords": list(keywords),
+        "ocr": list(ocrs),
         "thumbnails": scene_frames_paths,
         "metadata": metadata,
     }
@@ -120,34 +177,59 @@ def generate_keywords(image_path):
         return ["defaultKeyword"]
 
     keywords = []
-    prompts = [
-        "Write 9 keywords describing this image. Return comma seperated keywords in the same line."
-    ]
+    
+    # "Write 3 keywords describing this image. Only add keywords you are very confident about matching the image. Return comma seperated keywords in the same line.",
+    
+    prompt =  "Write 9 keywords describing this image. Return comma seperated keywords in the same line."
+    # promptOCR1 =   "Is there any text in this image? You are only allowed to answer 'yes' or 'no'."
+    # promptOCR2 =   "Extract text from this image."
 
-    for prompt in prompts:
-        result = ""
 
-        stream = ollama.generate(
-            model="llava", prompt=prompt, images=[image_path], stream=True
-        )
-        for chunk in stream:
-            print(chunk["response"], end="", flush=True)
-            result += chunk["response"]
 
-        keywords.extend(result.split(","))
+    keywordsText = run_ollama(prompt, image_path)
+    keywordsText = keywordsText.replace(".", "")
+    keywords = keywordsText.split(",")
+    
+    # isOCR_YES_NO = run_ollama(promptOCR1, image_path)
 
-    print(f"Keywords: {keywords}")
+    # if "yes" in isOCR_YES_NO.lower():
+        # ocr_text = run_ollama(promptOCR2, image_path)
+        # keywords.append(ocr_text)
+        # keywords.append(f'"{ocr_text}"')
+            
+
+    
+
+    
+
+    # print(f"Keywords: {keywords}")
     return keywords
+
+def run_ollama(prompt, imagePath):
+    result = ""
+
+    stream = ollama.generate(
+        model=modelName, prompt=prompt, images=[imagePath], stream=True
+    )
+    for chunk in stream:
+        print(chunk["response"], end="", flush=True)
+        result += chunk["response"]
+
+    return result
+
 
 
 def extract_equally_spaced_frames(video_path, num_frames):
     """Extracts equally spaced frames from a video and returns a list of frame paths."""
 
-    video_name = os.path.splitext(os.path.basename(video_path))[0]
+    # video_name = os.path.splitext(os.path.basename(video_path))[0]
+    # video_name = re.sub(r"[^\x00-\x7F]+", "", video_name)
+    # video_path = re.sub(r"[^\x00-\x7F]+", "", video_path)
+    shortened_video_path = video_path.replace(VIDEO_FOLDER, '', 1)
+    short_cleaned_video_path = re.sub(r'[^A-Za-z0-9_]', '', shortened_video_path)
 
-    video_name = re.sub(r"[^\x00-\x7F]+", "", video_name)
-
-    output_dir = PROCESSED_PATH + video_name
+    # output_dir = PROCESSED_PATH + video_name
+    output_dir = PROCESSED_PATH + short_cleaned_video_path
 
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
@@ -199,7 +281,7 @@ def time_function(func):
 @time_function
 def loadJsonData():
 
-    if os.path.exists(VIDEO_KEYWORDS_FILE) == False:
+    if OVERRIED_EXISTING or os.path.exists(VIDEO_KEYWORDS_FILE) == False:
         jsonData = {}
     else:
         with open(VIDEO_KEYWORDS_FILE, "r") as jsFile:
@@ -210,9 +292,6 @@ def loadJsonData():
 
     if "videos" not in jsonData:
         jsonData["videos"] = []
-
-    if "uniqueMetadata" not in jsonData:
-        jsonData["uniqueMetadata"] = {}
 
     return jsonData
 
