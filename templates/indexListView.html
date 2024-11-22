@@ -72,6 +72,7 @@
       }
       .thumbnail {
         min-width: 600px;
+        cursor: pointer;
       }
 
       .keyword-capsule {
@@ -82,6 +83,7 @@
         margin-right: 5px;
         margin-bottom: 5px;
         font-size: 12px;
+        cursor: pointer;
       }
       .pathDisplay {
         display: inline-block;
@@ -90,6 +92,7 @@
         margin-right: 5px;
         margin-bottom: 5px;
         font-size: 12px;
+        cursor: pointer;
       }
 
       .no-results {
@@ -158,6 +161,9 @@
         font-size: 12px;
       }
 
+      .selected-video-row {
+        background-color: rgba(0, 153, 255, 0.493);
+      }
       .highlighted {
         background-color: rgb(0, 153, 255);
         color: rgba(0, 0, 0, 0.6);
@@ -181,10 +187,27 @@
       #loadMore span {
         text-align: center; /* Ensures the text within the span is centered */
       }
+      #edit-selected-videos-keywords-btn{
+        /* //move to the right */
+        float: right;
+        
+        /* margin-right: 100px; */
+        /* margin-left: 500px; */
+      }
     </style>
   </head>
 
   <body>
+    <div class="modal-overlay"></div>
+    <div class="edit-keywords-modal">
+      <h3>Edit Keywords</h3>
+      <div id="edit-keywords-list"></div>
+      <input type="text" id="new-keyword" placeholder="Add new keyword" />
+      <button id="add-keyword-btn">Add</button>
+      <button id="save-keywords-btn">Save</button>
+      <button id="cancel-edit-btn">cancel</button>
+    </div>
+
     <div class="container">
       <div id="filters">
         <label for="fps-filter">FPS:</label>
@@ -213,6 +236,9 @@
 
       <label id="pageVideoCount">pageVideoConunt NOT ASSIGNED</label>
 
+      <!-- //button to edit all selected rows  -->
+      <button id="edit-selected-videos-keywords-btn">Edit Selected</button>
+
       <table>
         <thead>
           <tr>
@@ -224,10 +250,7 @@
               Keywords
               <div class="resize-handle"></div>
             </th>
-            <th>
-              Edit
-              <div class="resize-handle"></div>
-            </th>
+        
 
             <th data-sort="date">
               Date Created
@@ -249,20 +272,14 @@
               FPS
               <div class="resize-handle"></div>
             </th>
+            <th>
+              Edit
+              <div class="resize-handle"></div>
+            </th>
           </tr>
         </thead>
         <tbody id="video-results"></tbody>
       </table>
-    </div>
-
-    <div class="modal-overlay"></div>
-    <div class="edit-keywords-modal">
-      <h3>Edit Keywords</h3>
-      <div id="edit-keywords-list"></div>
-      <input type="text" id="new-keyword" placeholder="Add new keyword" />
-      <button id="add-keyword-btn">Add</button>
-      <button id="save-keywords-btn">Save</button>
-      <button id="cancel-edit-btn">Back</button>
     </div>
 
     <div id="loadMore">Displaying 22 out of 22 videos</div>
@@ -290,7 +307,7 @@
 
       const uniqueFps = new Set();
       const uniqueRatios = new Set();
-      let currentEditVideo = null;
+
       let keywordsToSearchList = [];
 
       let isResizing = false;
@@ -304,6 +321,7 @@
 
       function main() {
         setup();
+        getKeywordChangesFromServer();
         updateVideosDisplayed();
       }
 
@@ -346,13 +364,58 @@
         setupLoadMoreOnView();
 
         document
+          .getElementById("edit-selected-videos-keywords-btn")
+          .addEventListener("click", () => {
+            const selectedRows = document.querySelectorAll(
+              ".selected-video-row"
+            );
+            const selectedVideos = [];
+
+            selectedRows.forEach((row) => {
+              const path = row.id;
+              const video = videoKeywords.videos.find(
+                (video) => video.path === path
+              );
+              selectedVideos.push(video);
+            });
+
+            if (selectedVideos.length == 0) {
+              alert("No videos selected");
+              return;
+            }
+
+            setVideosToEdit(selectedVideos);
+            updateOpenEditKeywordsModal();
+
+            // if (selectedVideos.length > 1) {
+            //   // alert("Only one video can be edited at a time");
+             
+            //   return;
+            // }
+
+            // if (selectedVideos.length == 1) {
+            //   // alert("Only one video can be edited at a time");
+            //   // return;
+            //   // const videoToEdit = [selectedVideos[0]];
+            //   setVideoToEdit(selectedVideos);
+            //   openEditKeywordsModal(selectedVideos);
+            // }
+
+            // selectedVideos.forEach((video) => {
+            //   openEditKeywordsModal(video);
+            // });
+          });
+
+        document
           .getElementById("add-keyword-btn")
           .addEventListener("click", () => {
             const newKeyword = newKeywordInput.value.trim();
-            if (newKeyword && currentEditVideo) {
-              currentEditVideo.keywords.push(newKeyword);
+            // const videoToEdit = getVideoToEdit();
+            if (newKeyword) {
+              currentKeywordChanges.add.push(newKeyword);
+              // videoToEdit.keywords.push(newKeyword);
               newKeywordInput.value = "";
-              openEditKeywordsModal(currentEditVideo);
+              updateOpenEditKeywordsModal();
               updateVideosDisplayed();
             }
           });
@@ -360,17 +423,15 @@
         document
           .getElementById("save-keywords-btn")
           .addEventListener("click", () => {
-            editModal.style.display = "none";
-            modalOverlay.style.display = "none";
-            currentEditVideo = null;
+            hideEditWindow();
+            saveKeywordChanges();
           });
 
         document
           .getElementById("cancel-edit-btn")
           .addEventListener("click", () => {
-            editModal.style.display = "none";
-            modalOverlay.style.display = "none";
-            currentEditVideo = null;
+            hideEditWindow();
+            clearVideoToEdit();
           });
 
         tableHeaders.forEach((header) => {
@@ -392,6 +453,7 @@
             }
             toggleKeyword(keyword);
           }
+
         });
 
         fpsFilter.addEventListener("change", function () {
@@ -428,6 +490,212 @@
         });
       }
 
+      function addKeywordToVideosEdited(keyword) {
+        const videosToEdit = getVideosToEdit();
+        videosToEdit.forEach((video) => {
+          video.keywords.push(keyword);
+        });
+      }
+
+      // let currentEditVideo = null;
+      const currentKeywordChanges = { path: "", add: [], remove: [] };
+
+      function saveKeywordChanges() {
+        console.log("Saving keyword changes", currentKeywordChanges);
+        applyChange(currentKeywordChanges);
+        //send to server with fetch /saveKeywordChanges
+        fetch("/saveKeywordChanges", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(currentKeywordChanges),
+        })
+          .then((response) => response.json())
+          .then((data) => {
+            console.log("Success:", data);
+            clearVideoToEdit();
+            updateVideosDisplayed();
+          })
+          .catch((error) => {
+            console.error("Error:", error);
+          });
+
+      }
+
+function applyChange(change){
+
+  for (const path of change.paths) {
+                const video = videoKeywords.videos.find(
+                  (video) => video.path === path
+                );
+
+                if (video) {
+                  const changes = change;
+                  changes.add.forEach((keyword) => {
+                    video.keywords.push(keyword);
+                  });
+
+                  changes.remove.forEach((keyword) => {
+                    const index = video.keywords.indexOf(keyword);
+                    if (index !== -1) {
+                      video.keywords.splice(index, 1);
+                    }
+                  });
+                }
+              }
+  
+}
+
+      function getKeywordChangesFromServer() {
+        fetch("/getKeywordChanges")
+          .then((response) => response.json())
+          .then((changesToApply) => {
+            console.log("Keyword changes", changesToApply);
+
+            // # [{"paths":["V:\\zentrale-einrichtungen\\Kommunikation u. Marketing\\Marketing\\Videos\\DAAD Preis\\2024\\Export\\DAAD_24_final.mp4"], "add": ["gg"], "remove": [" flowers"]}]
+            for (const change of changesToApply) {
+              //loop through paths 
+              applyChange(change);
+            }
+            updateVideosDisplayed();
+          });
+      }
+
+      function setVideosToEdit(videos) {
+        currentVideosToEdit = videos;
+        const paths = videos.map((video) => video.path);
+        currentKeywordChanges["paths"] = paths;
+
+        
+      }
+
+      function getVideosToEdit() { //getVideoToEdit
+        return currentVideosToEdit;
+      }
+      function clearVideoToEdit() {
+        currentVideosToEdit = null;
+        currentKeywordChanges["paths"] = "";//path
+        currentKeywordChanges["add"] = [];
+        currentKeywordChanges["remove"] = [];
+      }
+
+      function showEditWindow() {
+        editModal.style.display = "block";
+        modalOverlay.style.display = "block";
+      }
+      function hideEditWindow() {
+        editModal.style.display = "none";
+        modalOverlay.style.display = "none";
+      }
+      function editWindowIsOpen() {
+        return editModal.style.display === "block";
+      }
+
+
+
+      function updateOpenEditKeywordsModal() {
+
+        selectedVideos = getVideosToEdit();
+
+        function getKeywordsToCapsule(keywords) {
+          return keywords
+            .map(
+              (keyword, index) =>
+                `<span class="keyword-capsule">${keyword} <button class="remove-keyword-btn" data-index="${index}">x</button></span>`
+            )
+            .join("");
+        }
+
+        // if(selectedVideos.length == 1){
+        //   const video = selectedVideos[0];
+        //   editKeywordsList.innerHTML = getKeywordsToCapsule(video.keywords);
+
+        //   console.log("Selected video", video);
+        
+        // }else if (selectedVideos.length > 1){
+
+          console.log("Selected videos", selectedVideos);
+          //check if the selected videos have the same keywords
+          const sameKeywords = [];
+          let keywordMatches = false;
+          
+          const video = selectedVideos[0];
+          // for(const video of selectedVideos){
+            for(const maybeInEveryVideo of video.keywords){
+              let keywordMatchesWithEveryVideo = true;
+              
+              for(const video of selectedVideos){   
+
+                let keywordMatched = false;
+                for(const videoKeyword of video.keywords){
+
+                  // keywordMatches =
+
+                  // console.log("keywordMatches", keywordMatches,"for", maybeInEveryVideo, videoKeyword);
+                  if(checkKeywordMatch(maybeInEveryVideo, videoKeyword)){
+                    keywordMatched = true;
+                    break;
+                  }
+                 
+                }
+
+                if(!keywordMatched){
+                  keywordMatchesWithEveryVideo = false;
+                  break;
+                }
+
+              }
+
+              if (keywordMatchesWithEveryVideo){
+                sameKeywords.push(maybeInEveryVideo);
+              }
+            }
+
+    
+
+  
+            
+
+            
+          // }
+          
+
+          editKeywordsList.innerHTML = getKeywordsToCapsule(sameKeywords);
+
+
+        showEditWindow();
+
+        document.querySelectorAll(".remove-keyword-btn").forEach((btn) => {
+          btn.addEventListener("click", (e) => {
+            const index = e.target.getAttribute("data-index");
+
+            const removedKeyword = video.keywords.splice(index, 1)[0];
+            currentKeywordChanges.remove.push(removedKeyword);
+
+            console.log("Removed keyword", removedKeyword);
+            // video.keywords.splice(index, 1);
+
+            updateVideosDisplayed();
+            updateOpenEditKeywordsModal();
+          });
+        });
+
+        // keyword listener on enter
+        newKeywordInput.addEventListener("keydown", (event) => {
+          if (event.key === "Enter") {
+            const newKeyword = newKeywordInput.value.trim();
+            if (newKeyword) {
+              currentKeywordChanges.add.push(newKeyword);
+              newKeywordInput.value = "";
+              updateVideosDisplayed();
+              updateOpenEditKeywordsModal();
+            }
+          }
+        });
+
+      }
+
       let loadingMore = false;
 
       function setupLoadMoreOnView() {
@@ -456,6 +724,7 @@
       }
 
       let globalFilteredVideos = [];
+      let currentlyDisplayingVideos = [];
 
       function updateVideosDisplayed() {
         let allVideos = getAllVideos();
@@ -465,19 +734,15 @@
         globalFilteredVideos = filterVideos(sortedVideos, false);
         const endTime = performance.now();
 
-        const reduceVideos = globalFilteredVideos.slice(
+        const filteredVideosSmall = globalFilteredVideos.slice(
           0,
           (indexVideoPage + 1) * MAX_VIDEOS_PER_PAGE
         );
 
-        const displayingText = `Displaying ${reduceVideos.length} out of ${globalFilteredVideos.length} videos`;
-        pageVideoCount.innerHTML = displayingText;
-        document.getElementById(
-          "loadMore"
-        ).innerHTML = `<span>${displayingText}</span>`;
+       
 
         const startTimeDisplay = performance.now();
-        displayVideos(reduceVideos);
+        displayVideos(filteredVideosSmall);
         const endTimeDisplay = performance.now();
       }
 
@@ -524,29 +789,7 @@
         }
       }
 
-      function searchKeywordMatchesVideoKeyword(
-        keywordInSearch,
-        keywordInVideo
-      ) {
-        const searchKeyword = keywordInSearch.toLowerCase().trim();
-        const videoKeyword = keywordInVideo.toLowerCase().trim();
 
-        if (videoKeyword === searchKeyword) {
-          return true;
-        }
-
-        const videoKeywordSplit = keywordInVideo.split(" ");
-        for (const videoKeywordSplitElement of videoKeywordSplit) {
-          const videoKeywordSplit = videoKeywordSplitElement
-            .toLowerCase()
-            .trim();
-          if (videoKeywordSplit === searchKeyword) {
-            return true;
-          }
-        }
-
-        return false;
-      }
 
       function videoMatchesSearch(video) {
         let matchesSearch = false;
@@ -554,7 +797,7 @@
         for (const keywordInSearch of keywordsToSearchList) {
           for (const keywordVideo of video.keywords) {
             if (
-              searchKeywordMatchesVideoKeyword(keywordInSearch, keywordVideo)
+              checkKeywordMatch(keywordInSearch, keywordVideo)
             ) {
               matchesSearch = true;
               break;
@@ -691,7 +934,17 @@
 
         return videosToSort;
       }
+
+      // currentlyDisplayingVideos
       function displayVideos(videos) {
+        currentlyDisplayingVideos = videos;
+        const displayingText = `Displaying ${currentlyDisplayingVideos.length} out of ${globalFilteredVideos.length} videos`;
+        pageVideoCount.innerHTML = displayingText;
+        document.getElementById(
+          "loadMore"
+        ).innerHTML = `<span>${displayingText}</span>`;
+
+
         const clearVideos = true;
         if (clearVideos) {
           videoResults.innerHTML = "";
@@ -820,6 +1073,8 @@
 
       function createVideoRow(video) {
         const row = document.createElement("tr");
+        row.classList.add("video-row");
+        row.id = video.path;
 
         const thumbnails = video.thumbnails;
 
@@ -833,8 +1088,8 @@
           thumbnails[THUMBNAIL_INDEX]
         )}" class="thumbnail"></td>
         <td>${pathHTML}<div class="keywordsContainer">${keywordsHtml}</div></td>
-        <td><button class="edit-keywords-btn">Edit</button></td>
         ${metadataHtml}
+           <td><input type="checkbox" class="edit-keywords-checkbox"></td>
       `;
 
         setupRowEventListeners(row, video, video.path, thumbnails);
@@ -963,12 +1218,45 @@
       }
 
       function setupEditKeywordsButton(row, video) {
-        row
-          .querySelector(".edit-keywords-btn")
-          .addEventListener("click", () => {
-            currentEditVideo = video;
-            openEditKeywordsModal(video);
-          });
+        const checkbox = row.querySelector(".edit-keywords-checkbox");
+        // toggleSelectRowCheckbox(row);
+        checkbox.addEventListener("change", (event) => {
+          toggleSelectRowCheckbox(row);
+          console.log("checkbox clicked");
+        });
+        // checkbox.addEventListener("click", (event) => {
+        // event.stopPropagation();
+        // toggleKeywordsCheckbox(row);
+        // });
+
+        row.addEventListener("click", (event) => {
+
+          if(isHoldingCtrl){
+            toggleSelectRowCheckbox(row,true);
+            // console.log("Ctrl is held");
+          }
+          // console.log("Row clicked");
+
+          // const eventClassList = event.target.classList;
+          // if (eventClassList.contains("edit-keywords-checkbox") || eventClassList.contains("video-row")) {
+          //   toggleKeywordsCheckbox(row);
+          // }
+        });
+      }
+
+      function toggleSelectRowCheckbox(row,toogle = false) {
+
+        const checkbox = row.querySelector(".edit-keywords-checkbox");
+if(toogle){
+ checkbox.checked = !checkbox.checked;
+}
+       
+
+        if (checkbox.checked) {
+          row.classList.add("selected-video-row");
+        } else {
+          row.classList.remove("selected-video-row");
+        }
       }
 
       function displayNoResultsMessage() {
@@ -1004,26 +1292,6 @@
         }
 
         return path;
-      }
-
-      function openEditKeywordsModal(video) {
-        editKeywordsList.innerHTML = video.keywords
-          .map(
-            (keyword, index) =>
-              `<span class="keyword-capsule">${keyword} <button class="remove-keyword-btn" data-index="${index}">x</button></span>`
-          )
-          .join("");
-        editModal.style.display = "block";
-        modalOverlay.style.display = "block";
-
-        document.querySelectorAll(".remove-keyword-btn").forEach((btn) => {
-          btn.addEventListener("click", (e) => {
-            const index = e.target.getAttribute("data-index");
-            video.keywords.splice(index, 1);
-            updateVideosDisplayed();
-            openEditKeywordsModal(video);
-          });
-        });
       }
 
       function isAppleMac() {
@@ -1086,6 +1354,107 @@
           addToKeywordsToSearch(keyword);
         }
       }
+      function checkKeywordMatch(
+        keywordInSearch,
+        keywordInVideo
+      ) {
+        const searchKeyword = keywordInSearch.toLowerCase().trim();
+        const videoKeyword = keywordInVideo.toLowerCase().trim();
+
+        if (videoKeyword === searchKeyword) {
+          return true;
+        }
+
+        const videoKeywordSplit = keywordInVideo.split(" ");
+        for (const videoKeywordSplitElement of videoKeywordSplit) {
+          const videoKeywordSplit = videoKeywordSplitElement
+            .toLowerCase()
+            .trim();
+          if (videoKeywordSplit === searchKeyword) {
+            return true;
+          }
+        }
+
+        return false;
+      }
+
+      let isHoldingCtrl = false;
+
+      document.addEventListener("keydown", function (event) {
+
+        const ctrl = event.ctrlKey || event.metaKey;
+
+        if(ctrl){
+          isHoldingCtrl = true;
+        }
+
+        
+
+        if (ctrl && event.key === "a") {
+          event.preventDefault(); // Prevent the default "Select All" action
+          // alert("Ctrl + A was pressed, but the default action is disabled.");
+          // currentlyDisplayingVideos
+          // console.log("Select all",currentlyDisplayingVideos);
+          const checkboxes = document.querySelectorAll(
+            ".edit-keywords-checkbox"
+          );
+
+          const allCheckboxesAreCheckted = Array.from(checkboxes).every((checkbox) => checkbox.checked);
+
+          if(allCheckboxesAreCheckted){
+            checkboxes.forEach((checkbox) => {
+              checkbox.checked = false;
+              toggleSelectRowCheckbox(checkbox.parentElement.parentElement);
+            });
+
+          }
+          else{
+            checkboxes.forEach((checkbox) => {
+            checkbox.checked = true;
+            toggleSelectRowCheckbox(checkbox.parentElement.parentElement);
+          });
+          }
+
+
+
+
+        }else if(event.key === "Escape"){
+
+
+          if(editWindowIsOpen()){
+            hideEditWindow();
+            // clearVideoToEdit();
+            saveKeywordChanges();
+            return;
+          }
+
+
+          const checkboxes = document.querySelectorAll(
+            ".edit-keywords-checkbox"
+          );
+          checkboxes.forEach((checkbox) => {
+            checkbox.checked = false;
+            toggleSelectRowCheckbox(checkbox.parentElement.parentElement);
+          });
+        }else if(ctrl && event.key === "e"){
+          event.preventDefault(); // Prevent the default "Select All" action
+          console.log("Edit button pressed"); 
+          //edit button pressed
+          // id="edit-selected-videos-keywords-btn"
+          document.getElementById("edit-selected-videos-keywords-btn").click();
+        }
+      });
+
+      document.addEventListener("keyup", function (event) {
+       if(event.key === "Control" || event.key === "Meta"){
+         isHoldingCtrl = false;
+       }
+      });
+
+
+      
+ 
+      
 
       main();
     </script>
