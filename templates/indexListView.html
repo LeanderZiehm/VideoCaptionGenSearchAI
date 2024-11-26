@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Video Keyword Search</title>
-    <script src="{{ url_for('static', filename='videoKeywords.js') }}"></script>
+    <script src="{{ url_for('static', filename='videoKeywordsOLD.js') }}"></script>
 
     <style>
       body {
@@ -325,6 +325,16 @@
         updateVideosDisplayed();
       }
 
+      function getRootPath(path){
+        const relativePath = path.replace(
+            "V:\\zentrale-einrichtungen\\Kommunikation u. Marketing\\Marketing\\Videos\\",
+            ""
+          );
+          const rootPath = relativePath.split("\\")[0];
+
+          return rootPath;
+      }
+
       function setup() {
         sortSettings.sortBy = "date";
         sortSettings.isAscending = false;
@@ -339,11 +349,12 @@
         for (let i = 0; i < videos.length; i++) {
           const video = videos[i];
 
-          const relativePath = video.path.replace(
-            "V:\\zentrale-einrichtungen\\Kommunikation u. Marketing\\Marketing\\Videos\\",
-            ""
-          );
-          const rootPath = relativePath.split("\\")[0];
+          // const relativePath = video.path.replace(
+          //   "V:\\zentrale-einrichtungen\\Kommunikation u. Marketing\\Marketing\\Videos\\",
+          //   ""
+          // );
+          // const rootPath = relativePath.split("\\")[0];
+          const rootPath = getRootPath(video.path);
 
           if (rootPath.indexOf(".") == -1) {
             rootPaths.add(rootPath);
@@ -753,10 +764,21 @@ function applyChange(change){
             let highlight = "";
 
             if (matchedKeyword != null) {
+
+
+              const regex = new RegExp(`\\b${matchedKeyword}\\b`, "gi");  // Word boundaries around matchedKeyword
               keyword = keyword.replace(
-                matchedKeyword,
-                `<span style="color:white" >${matchedKeyword}</span>`
+                  regex,
+                  `<span style="color:white">${matchedKeyword.toLowerCase()}</span>`
               );
+
+
+              console.log("keyword", keyword, "matchedKeyword", matchedKeyword);
+
+            //   keyword = keyword.replace(
+            //     matchedKeyword,
+            //     `<span style="color:white" >${matchedKeyword}</span>`
+            //   );
 
               highlight = "highlighted";
             }
@@ -1167,6 +1189,26 @@ function applyChange(change){
 
       function setupPathDisplayListener(row, filePath) {
         row.querySelector(".pathDisplay").addEventListener("click", () => {
+
+          if(isHoldingAlt){
+            //change dropdown to select the path 
+            const pathFilter = document.getElementById("path-filter");
+
+            const rootPath = getRootPath(filePath);
+            // const toSet =  filePath.split("\\")[0];
+            // console.log("toSet", toSet);
+            // get all options of pathfilter
+            // const options = pathFilter.options;
+            // console.log("options", options);
+            pathFilter.value = rootPath;
+
+
+            updateVideosDisplayed();
+            return;
+          }
+        
+
+
           const filePathToCopy = getPathForOs(filePath, false);
           copyToClipboard(filePathToCopy);
           showPath(filePathToCopy);
@@ -1379,6 +1421,7 @@ if(toogle){
       }
 
       let isHoldingCtrl = false;
+      let isHoldingAlt = false;
 
       document.addEventListener("keydown", function (event) {
 
@@ -1386,6 +1429,9 @@ if(toogle){
 
         if(ctrl){
           isHoldingCtrl = true;
+        }
+        if(event.key === "Alt"){
+          isHoldingAlt = true;
         }
 
         
@@ -1448,6 +1494,9 @@ if(toogle){
       document.addEventListener("keyup", function (event) {
        if(event.key === "Control" || event.key === "Meta"){
          isHoldingCtrl = false;
+       }
+       if(event.key === "Alt"){
+         isHoldingAlt = false;
        }
       });
 
