@@ -231,6 +231,10 @@
       </div>
 
       <input type="text" id="search-bar" placeholder="Search for captions..." />
+    
+      <!-- //add lable  -->
+      <label for="strict-search">Strict Search</label>
+      <input type="checkbox" id="strict-search" name="strict-search" value="strict-search">
 
       <div id="keywordsToSearch"></div>
 
@@ -416,6 +420,8 @@
             //   openEditKeywordsModal(video);
             // });
           });
+
+          document.getElementById("strict-search").addEventListener("change", updateVideosDisplayed);
 
         document
           .getElementById("add-keyword-btn")
@@ -816,7 +822,14 @@ function applyChange(change){
       function videoMatchesSearch(video) {
         let matchesSearch = false;
 
-        for (const keywordInSearch of keywordsToSearchList) {
+        // const hasToMatchAllKeywords = true; //  TODO
+        // strict-search
+        const hasToMatchAllKeywords = document.getElementById("strict-search").checked;
+
+        // const hasToMatchAllKeywords = true;
+
+        if(hasToMatchAllKeywords == false){
+          for (const keywordInSearch of keywordsToSearchList) {
           for (const keywordVideo of video.keywords) {
             if (
               checkKeywordMatch(keywordInSearch, keywordVideo)
@@ -830,6 +843,29 @@ function applyChange(change){
             }
           }
         }
+        }else{
+          let allKeywordsMatched = true;//#####
+          for (const keywordInSearch of keywordsToSearchList) {
+            let keywordMatched = false;
+            for (const keywordVideo of video.keywords) {
+              if (
+                checkKeywordMatch(keywordInSearch, keywordVideo)
+              ) {
+                keywordMatched = true;
+                break;
+              }
+            }
+
+            if (!keywordMatched) {
+              allKeywordsMatched = false;
+              break;
+            }
+          }
+
+          matchesSearch = allKeywordsMatched;
+        }
+
+  
 
         if (keywordsToSearchList.length == 0) {
           matchesSearch = true;
