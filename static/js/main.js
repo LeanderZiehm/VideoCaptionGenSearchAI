@@ -1,0 +1,1068 @@
+let MAX_VIDEOS_PER_PAGE = 100;
+const FLIP_THROUGH_INTERVAL = 270;
+const searchBar = document.getElementById("search-bar");
+const videoResults = document.getElementById("video-results");
+const tableHeaders = document.querySelectorAll("th[data-sort]");
+const editModal = document.querySelector(".edit-keywords-modal");
+const modalOverlay = document.querySelector(".modal-overlay");
+const editKeywordsList = document.getElementById("edit-keywords-list");
+const newKeywordInput = document.getElementById("new-keyword");
+const fpsFilter = document.getElementById("fps-filter");
+const ratioFilter = document.getElementById("ratio-filter");
+const minDateInput = document.getElementById("minDate");
+const maxDateInput = document.getElementById("maxDate");
+const pageVideoCount = document.getElementById("pageVideoCount");
+const pathFilter = document.getElementById("path-filter");
+const uniqueFps = new Set();
+const uniqueRatios = new Set();
+let keywordsToSearchList = [];
+let isResizing = false;
+let lastDownX = 0;
+let currentTh;
+let indexVideoPage = 0;
+const THUMBNAIL_INDEX = 1;
+let sortSettings = { sortBy: null, isAscending: true };
+
+function main() {
+  setup();
+  getKeywordChangesFromServer();
+  updateVideosDisplayed();
+}
+
+function getRootPath(path) {
+  const relativePath = path.replace(
+    "V:\\zentrale-einrichtungen\\Kommunikation u. Marketing\\Marketing\\Videos\\",
+    ""
+  );
+  const rootPath = relativePath.split("\\")[0];
+
+  return rootPath;
+}
+
+function setup() {
+  sortSettings.sortBy = "date";
+  sortSettings.isAscending = false;
+
+  minDateInput.value = "2007-01-01";
+  maxDateInput.value = new Date().toISOString().split("T")[0];
+  minDateInput.addEventListener("change", updateVideosDisplayed);
+  maxDateInput.addEventListener("change", updateVideosDisplayed);
+
+  const rootPaths = new Set();
+  const videos = videoKeywords.videos;
+  for (let i = 0; i < videos.length; i++) {
+    const video = videos[i];
+    const rootPath = getRootPath(video.path);
+    if (rootPath.indexOf(".") == -1) {
+      rootPaths.add(rootPath);
+    }
+  }
+
+  pathFilter.innerHTML = `<option value="">All</option>${Array.from(rootPaths)
+    .map((rootPath) => `<option value="${rootPath}">${rootPath}</option>`)
+    .join("")}`;
+
+  pathFilter.addEventListener("change", function () {
+    updateVideosDisplayed();
+  });
+
+  fillFPSAndRatioAndMinMaxDateDropdownFilters();
+  setupLoadMoreOnView();
+
+  document
+    .getElementById("edit-selected-videos-keywords-btn")
+    .addEventListener("click", () => {
+      const selectedRows = document.querySelectorAll(".selected-video-row");
+      const selectedVideos = [];
+
+      selectedRows.forEach((row) => {
+        const path = row.id;
+        const video = videoKeywords.videos.find((video) => video.path === path);
+        selectedVideos.push(video);
+      });
+
+      if (selectedVideos.length == 0) {
+        alert("No videos selected");
+        return;
+      }
+      setVideosToEdit(selectedVideos);
+      updateOpenEditKeywordsModal();
+    });
+
+  document
+    .getElementById("strict-search")
+    .addEventListener("change", updateVideosDisplayed);
+  document
+    .getElementById("match-in-path")
+    .addEventListener("change", updateVideosDisplayed);
+
+  document.getElementById("add-keyword-btn").addEventListener("click", () => {
+    const newKeyword = newKeywordInput.value.trim();
+    if (newKeyword) {
+      currentKeywordChanges.add.push(newKeyword);
+      newKeywordInput.value = "";
+      updateOpenEditKeywordsModal();
+      updateVideosDisplayed();
+    }
+  });
+
+  document.getElementById("save-keywords-btn").addEventListener("click", () => {
+    hideEditWindow();
+    saveKeywordChanges();
+  });
+
+  tableHeaders.forEach((header) => {
+    header.addEventListener("click", () => {
+      const sortHeader = header.getAttribute("data-sort");
+      sortSettings.sortBy = sortHeader;
+      sortSettings.isAscending = !sortSettings.isAscending;
+
+      updateVideosDisplayed();
+    });
+  });
+
+  searchBar.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      let keyword = searchBar.value;
+
+      if (keyword.length == 0) {
+        return;
+      }
+      toggleKeyword(keyword);
+    }
+  });
+
+  fpsFilter.addEventListener("change", function () {
+    ratioFilter.value = "";
+    updateVideosDisplayed();
+  });
+
+  ratioFilter.addEventListener("change", function () {
+    fpsFilter.value = "";
+    updateVideosDisplayed();
+  });
+
+  document.querySelectorAll("th").forEach((th) => {
+    const handle = th.querySelector(".resize-handle");
+    handle.addEventListener("mousedown", (e) => {
+      isResizing = true;
+      lastDownX = e.clientX;
+      currentTh = th;
+    });
+  });
+
+  document.addEventListener("mousemove", (e) => {
+    if (!isResizing) return;
+
+    const offsetRight =
+      currentTh.offsetWidth -
+      (e.clientX - currentTh.getBoundingClientRect().left);
+    currentTh.style.width = `${currentTh.offsetWidth - offsetRight}px`;
+  });
+
+  document.addEventListener("mouseup", () => {
+    isResizing = false;
+    currentTh = null;
+  });
+}
+
+function addKeywordToVideosEdited(keyword) {
+  const videosToEdit = getVideosToEdit();
+  videosToEdit.forEach((video) => {
+    video.keywords.push(keyword);
+  });
+}
+
+const currentKeywordChanges = { path: "", add: [], remove: [] };
+function saveKeywordChanges() {
+  const addedOrRemovedSomething =
+    currentKeywordChanges.add.length > 0 ||
+    currentKeywordChanges.remove.length > 0;
+
+  if (!addedOrRemovedSomething) {
+    console.log("No changes to save");
+    return;
+  }
+
+  console.log("Saving keyword changes", currentKeywordChanges);
+  applyChange(currentKeywordChanges);
+  fetch("/saveKeywordChanges", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(currentKeywordChanges),
+  })
+    .then((response) => response.json())
+    .then((data) => {
+      console.log("Success:", data);
+      clearVideoToEdit();
+      updateVideosDisplayed();
+    })
+    .catch((error) => {
+      console.error("Error:", error);
+    });
+}
+
+function applyChange(change) {
+  for (const path of change.paths) {
+    const video = videoKeywords.videos.find((video) => video.path === path);
+
+    if (video) {
+      const changes = change;
+      changes.add.forEach((keyword) => {
+        video.keywords.push(keyword);
+      });
+
+      changes.remove.forEach((keyword) => {
+        const index = video.keywords.indexOf(keyword);
+        if (index !== -1) {
+          video.keywords.splice(index, 1);
+        }
+      });
+    }
+  }
+}
+
+function getKeywordChangesFromServer() {
+  fetch("/getKeywordChanges")
+    .then((response) => response.json())
+    .then((changesToApply) => {
+      console.log("Keyword changes", changesToApply);
+
+      for (const change of changesToApply) {
+        applyChange(change);
+      }
+      updateVideosDisplayed();
+    });
+}
+
+function setVideosToEdit(videos) {
+  currentVideosToEdit = videos;
+  const paths = videos.map((video) => video.path);
+  currentKeywordChanges["paths"] = paths;
+}
+
+function getVideosToEdit() {
+  return currentVideosToEdit;
+}
+function clearVideoToEdit() {
+  currentVideosToEdit = null;
+  currentKeywordChanges["paths"] = ""; 
+  currentKeywordChanges["add"] = [];
+  currentKeywordChanges["remove"] = [];
+}
+
+function showEditWindow() {
+  editModal.style.display = "block";
+  modalOverlay.style.display = "block";
+}
+function hideEditWindow() {
+  editModal.style.display = "none";
+  modalOverlay.style.display = "none";
+}
+function editWindowIsOpen() {
+  return editModal.style.display === "block";
+}
+
+function updateOpenEditKeywordsModal() {
+  selectedVideos = getVideosToEdit();
+
+  function getKeywordsToCapsule(keywords) {
+    return keywords
+      .map(
+        (keyword, index) =>
+          `<span class="keyword-capsule">${keyword} <button class="remove-keyword-btn" data-index="${index}">x</button></span>`
+      )
+      .join("");
+  }
+  console.log("Selected videos", selectedVideos);
+  const sameKeywords = [];
+  let keywordMatches = false;
+  const video = selectedVideos[0];
+  for (const maybeInEveryVideo of video.keywords) {
+    let keywordMatchesWithEveryVideo = true;
+
+    for (const video of selectedVideos) {
+      let keywordMatched = false;
+      for (const videoKeyword of video.keywords) {
+        if (checkKeywordMatch(maybeInEveryVideo, videoKeyword)) {
+          keywordMatched = true;
+          break;
+        }
+      }
+      if (!keywordMatched) {
+        keywordMatchesWithEveryVideo = false;
+        break;
+      }
+    }
+    if (keywordMatchesWithEveryVideo) {
+      sameKeywords.push(maybeInEveryVideo);
+    }
+  }
+  editKeywordsList.innerHTML = getKeywordsToCapsule(sameKeywords);
+  showEditWindow();
+
+  document.querySelectorAll(".remove-keyword-btn").forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      const index = e.target.getAttribute("data-index");
+      const removedKeyword = video.keywords.splice(index, 1)[0];
+      currentKeywordChanges.remove.push(removedKeyword);
+      console.log("Removed keyword", removedKeyword);
+      updateVideosDisplayed();
+      updateOpenEditKeywordsModal();
+    });
+  });
+
+  newKeywordInput.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      const newKeyword = newKeywordInput.value.trim();
+      if (newKeyword) {
+        currentKeywordChanges.add.push(newKeyword);
+        newKeywordInput.value = "";
+        updateVideosDisplayed();
+        updateOpenEditKeywordsModal();
+      }
+    }
+  });
+}
+
+let loadingMore = false;
+
+function setupLoadMoreOnView() {
+  window.addEventListener("scroll", function (event) {
+    const element = document.getElementById("loadMore");
+    if (isVisible(element)) {
+      nextPage();
+      console.log("Visible, load more");
+      loadingMore = true;
+    }
+  });
+}
+
+function requestToLoadMore() {
+  if (!loadingMore) {
+    loadingMore = true;
+  }
+}
+
+function isVisible(ele) {
+  const { top, bottom } = ele.getBoundingClientRect();
+  const vHeight = window.innerHeight || document.documentElement.clientHeight;
+
+  return (top > 0 || bottom > 0) && top < vHeight;
+}
+
+let globalFilteredVideos = [];
+let currentlyDisplayingVideos = [];
+
+function updateVideosDisplayed() {
+  let allVideos = getAllVideos();
+  sortedVideos = sortVideos(allVideos);
+
+  const startTime = performance.now();
+  globalFilteredVideos = filterVideos(sortedVideos, false);
+  const endTime = performance.now();
+
+  const filteredVideosSmall = globalFilteredVideos.slice(
+    0,
+    (indexVideoPage + 1) * MAX_VIDEOS_PER_PAGE
+  );
+
+  const startTimeDisplay = performance.now();
+  displayVideos(filteredVideosSmall);
+  const endTimeDisplay = performance.now();
+}
+
+function generateKeywordsHtml(keywords) {
+  return keywords
+    .map((keyword) => {
+      const matchedKeyword = getMatchedKeyword(keyword);
+      let highlight = "";
+
+      if (matchedKeyword != null) {
+        const regex = new RegExp(`\\b${matchedKeyword}\\b`, "gi");
+        keyword = keyword.replace(
+          regex,
+          `<span style="color:white">${matchedKeyword.toLowerCase()}</span>`
+        );
+        highlight = "highlighted";
+      }
+      return `<span class="keyword-capsule ${highlight}">${keyword}</span>`;
+    })
+    .join("");
+}
+
+function keywordIsInVideoPath(video, keyword) {
+  return video.path.toLowerCase().includes(keyword.toLowerCase());
+}
+
+function getMatchedKeyword(keywordInVideo) {
+  const videoKeyword = keywordInVideo.toLowerCase().trim();
+  for (const keywordInSearch of keywordsToSearchList) {
+    const searchKeyword = keywordInSearch.toLowerCase().trim();
+    if (videoKeyword === searchKeyword) {
+      return keywordInSearch;
+    }
+    const videoKeywordSplit = videoKeyword.split(" ");
+    for (const videoKeywordSplitElement of videoKeywordSplit) {
+      const videoKeywordSplit = videoKeywordSplitElement.toLowerCase().trim();
+      if (videoKeywordSplit === searchKeyword) {
+        return keywordInSearch;
+      }
+    }
+  }
+}
+
+function videoMatchesSearch(video) {
+  let matchesSearch = false;
+
+  const strictSearch = document.getElementById("strict-search").checked;
+  const matchInPath = document.getElementById("match-in-path").checked;
+
+  let allKeywordsMatched = true; 
+  for (let keywordInSearch of keywordsToSearchList) {
+    let keywordMatched = false;
+    for (const keywordVideo of video.keywords) {
+      if (checkKeywordMatch(keywordInSearch, keywordVideo)) {
+        keywordMatched = true;
+        break;
+      }
+    }
+
+    if (matchInPath) {
+      if (keywordIsInVideoPath(video, keywordInSearch)) {
+        keywordMatched = true;
+      }
+    }
+
+    if (keywordInSearch.startsWith("!")) {
+      const negativeSearchKeyword = keywordInSearch.replace("!", "");
+      if (video.keywords.includes(negativeSearchKeyword)) {
+        keywordMatched = false;
+      } else {
+        keywordMatched = true;
+      }
+    }
+
+    if (strictSearch) {
+      if (!keywordMatched) {
+        allKeywordsMatched = false;
+        break;
+      }
+    } else {
+      matchesSearch = keywordMatched;
+    }
+  }
+
+  if (strictSearch) {
+    matchesSearch = allKeywordsMatched;
+  }
+
+  if (keywordsToSearchList.length == 0) {
+    matchesSearch = true;
+  }
+
+  return matchesSearch;
+}
+
+function filterVideos(videos, shouldStopEarly = true) {
+  const fpsValue = fpsFilter.value;
+  const ratioValue = ratioFilter.value;
+  const pathValue = document.getElementById("path-filter").value;
+  const minDate = document.getElementById("minDate").value;
+  const maxDate = document.getElementById("maxDate").value;
+  const matchedVideos = [];
+
+  let stopedEarly = -1;
+
+  for (let i = 0; i < videos.length; i++) {
+    if (shouldStopEarly) {
+      if (
+        globalFilteredVideos.length >=
+        MAX_VIDEOS_PER_PAGE * (indexVideoPage + 1)
+      ) {
+        stopedEarly = i;
+        break;
+      }
+    }
+
+    const video = videos[i];
+
+    let hasKeyword = videoMatchesSearch(video);
+
+    let videoFPS;
+    let videoRatio;
+    let videoDate;
+
+    if (video.metadata == null) {
+      videoFPS = "unknown";
+      videoRatio = "unknown";
+      videoDate = "unknown";
+    } else {
+      videoFPS = video.metadata.fps;
+      videoRatio = video.metadata.ratio;
+      videoDate = new Date(video.metadata.media_time_created);
+    }
+
+    const matchesFps = fpsValue === "" || videoFPS == fpsValue;
+    const matchesRatio = ratioValue === "" || videoRatio == ratioValue;
+    const matchesPath =
+      pathValue === "" ||
+      video.path
+        .replace(
+          "V:\\zentrale-einrichtungen\\Kommunikation u. Marketing\\Marketing\\Videos\\",
+          ""
+        )
+        .split("\\")[0] == pathValue;
+
+    const searchingForUnknowns =
+      fpsValue === "unknown" || ratioValue === "unknown";
+    const isInDateRange =
+      (videoDate >= new Date(minDate) && videoDate <= new Date(maxDate)) ||
+      (searchingForUnknowns && videoDate == "unknown");
+
+    if (
+      hasKeyword &&
+      matchesFps &&
+      matchesRatio &&
+      isInDateRange &&
+      matchesPath
+    ) {
+      matchedVideos.push(video);
+    }
+  }
+
+  return matchedVideos;
+}
+
+function sortVideos(videosToSort) {
+  const sortKey = sortSettings.sortBy;
+
+  const isAscending = sortSettings.isAscending;
+
+  videosToSort.sort((a, b) => {
+    if (a.metadata == null && b.metadata == null) {
+      return 0;
+    }
+    if (a.metadata == null) {
+      return 1;
+    }
+    if (b.metadata == null) {
+      return -1;
+    }
+    if (sortKey === "date") {
+      return (
+        (new Date(a.metadata.media_time_created) -
+          new Date(b.metadata.media_time_created)) *
+        (isAscending ? 1 : -1)
+      );
+    } else if (sortKey === "length") {
+      return (
+        (a.metadata.video_length - b.metadata.video_length) *
+        (isAscending ? 1 : -1)
+      );
+    } else if (sortKey === "size") {
+      return (
+        (a.metadata.file_size - b.metadata.file_size) * (isAscending ? 1 : -1)
+      );
+    } else if (sortKey === "fps") {
+      return (a.metadata.fps - b.metadata.fps) * (isAscending ? 1 : -1);
+    } else if (sortKey === "ratio") {
+      return (
+        a.metadata.ratio.localeCompare(b.metadata.ratio) *
+        (isAscending ? 1 : -1)
+      );
+    }
+  });
+
+  return videosToSort;
+}
+function displayVideos(videos) {
+  currentlyDisplayingVideos = videos;
+  const displayingText = `Displaying ${currentlyDisplayingVideos.length} out of ${globalFilteredVideos.length} videos`;
+  pageVideoCount.innerHTML = displayingText;
+  document.getElementById(
+    "loadMore"
+  ).innerHTML = `<span>${displayingText}</span>`;
+
+  const clearVideos = true;
+  if (clearVideos) {
+    videoResults.innerHTML = "";
+  }
+
+  if (videos.length > 0) {
+    videos.forEach((video) => {
+      const row = createVideoRow(video);
+      videoResults.appendChild(row);
+    });
+  } else {
+    displayNoResultsMessage();
+  }
+}
+
+function resetPage() {
+  indexVideoPage = 0;
+
+  updateVideosDisplayed();
+}
+
+function nextPage() {
+  if (indexVideoPage * MAX_VIDEOS_PER_PAGE >= globalFilteredVideos.length) {
+    console.log("No more videos to display.");
+    return;
+  }
+
+  console.log("Next page");
+  indexVideoPage++;
+
+  updateVideosDisplayed();
+}
+function previousPage() {
+  if (indexVideoPage === 0) {
+    console.log("Already at the first page.");
+    return;
+  }
+
+  indexVideoPage--;
+
+  updateVideosDisplayed();
+}
+
+function fillFPSAndRatioAndMinMaxDateDropdownFilters() {
+  const videos = videoKeywords.videos;
+
+  const maxDate = new Date(
+    Math.max.apply(
+      null,
+      videos.map((video) =>
+        video.metadata == null
+          ? new Date(0)
+          : new Date(video.metadata.media_time_created)
+      )
+    )
+  );
+  maxDate.setDate(maxDate.getDate() + 1);
+
+  const minDate = new Date(
+    Math.min.apply(
+      null,
+      videos.map((video) =>
+        video.metadata == null
+          ? new Date()
+          : new Date(video.metadata.media_time_created)
+      )
+    )
+  );
+  minDateInput.value = minDate.toISOString().split("T")[0];
+  maxDateInput.value = maxDate.toISOString().split("T")[0];
+
+  for (let i = 0; i < videos.length; i++) {
+    const video = videos[i];
+    if (video.metadata == null) {
+      continue;
+    } else {
+    }
+    uniqueFps.add(video.metadata.fps);
+    uniqueRatios.add(video.metadata.ratio);
+  }
+
+  const orderedFps = Array.from(uniqueFps).sort((b, a) => a - b);
+
+  const orderedRatios = Array.from(uniqueRatios).sort((b, a) => {
+    const aSplit = a.split(":");
+    const bSplit = b.split(":");
+    if (aSplit.length == 2 && bSplit.length == 2) {
+      return aSplit[0] + aSplit[1] - (bSplit[0] + bSplit[1]);
+    } else {
+      return a.localeCompare(b);
+    }
+  });
+
+  fpsFilter.innerHTML = `<option value="">All</option>${orderedFps
+    .map((fps) => `<option value="${fps}">${fps}</option>`)
+    .join("")}<option value="unknown">unknown</option>`;
+  ratioFilter.innerHTML = `<option value="">All</option>${orderedRatios
+    .map((ratio) => `<option value="${ratio}">${ratio}</option>`)
+    .join("")}<option value="unknown">unknown</option>`;
+}
+
+function copyToClipboard(text) {
+  const tempInput = document.createElement("input");
+  tempInput.style.position = "absolute";
+  tempInput.style.left = "-9999px";
+  tempInput.value = text;
+  document.body.appendChild(tempInput);
+  tempInput.select();
+  document.execCommand("copy");
+  document.body.removeChild(tempInput);
+}
+
+function getAllVideos() {
+  return videoKeywords.videos;
+}
+
+function createVideoRow(video) {
+  const row = document.createElement("tr");
+  row.classList.add("video-row");
+  row.id = video.path;
+
+  const thumbnails = video.thumbnails;
+
+  const keywordsHtml = generateKeywordsHtml(video.keywords);
+  const metadataHtml = generateMetadataHtml(video.metadata);
+
+  const pathHTML = generatePathHTML(video);
+
+  row.innerHTML = `
+  <td><img src="${getThumbnailPathRelative(
+    thumbnails[THUMBNAIL_INDEX]
+  )}" class="thumbnail"></td>
+  <td>${pathHTML}<div class="keywordsContainer">${keywordsHtml}</div></td>
+  ${metadataHtml}
+      <td><input type="checkbox" class="edit-keywords-checkbox"></td>
+`;
+
+  setupRowEventListeners(row, video, video.path, thumbnails);
+
+  return row;
+}
+
+function extractFileName(filePath) {
+  return filePath.split("\\").pop();
+}
+
+function generatePathHTML(video) {
+  let path = getPathForOs(video.path, false);
+
+  const div = document.createElement("div");
+  let highlighted = "";
+
+  const matchInPath = document.getElementById("match-in-path").checked;
+  if (matchInPath) {
+    for (const keywordInSearch of keywordsToSearchList) {
+      if (keywordIsInVideoPath(video, keywordInSearch)) {
+        highlighted = "highlighted";
+        const regex = new RegExp(keywordInSearch, "gi");
+
+        path = path.replace(regex, (match) => {
+          return `<span style="color:white">${match}</span>`;
+        });
+
+        break;
+      }
+    }
+  }
+
+  const pathHTML = `<div class="pathDisplay ${highlighted}">${path}</div>`;
+  return pathHTML;
+}
+
+function generateMetadataHtml(metadata) {
+  if (!metadata) {
+    return `
+    <td>Unknown Date</td>
+    <td>Unknown Length</td>
+    <td>Unknown Size</td>
+    <td>Unknown Ratio</td>
+    <td>Unknown FPS</td>
+  `;
+  } else {
+    return `
+    <td>${new Date(metadata.media_time_created).toLocaleString()}</td>
+    <td>${metadata.video_length.toFixed(2)}</td>
+    <td>${(metadata.file_size / (1024 * 1024)).toFixed(2)}</td>
+    <td>${metadata.ratio}</td>
+    <td>${metadata.fps.toFixed(2)}</td>
+  `;
+  }
+}
+
+function getThumbnailPathRelative(thumbnailPath) {
+  if (!thumbnailPath) {
+    return "static/no_image_placeholder.png";
+  }
+
+  const processedIndex = thumbnailPath.indexOf("static");
+  if (processedIndex !== -1) {
+    return thumbnailPath.substring(processedIndex);
+  } else {
+    console.error("Processed folder not found in the path.");
+    return null;
+  }
+}
+
+function setupRowEventListeners(row, video, filePath, thumbnails) {
+  setupPathDisplayListener(row, filePath);
+  setupKeywordsContainerListener(row);
+  setupThumbnailHover(row, thumbnails);
+  setupThumbnailClick(row, filePath);
+  setupEditKeywordsButton(row, video);
+}
+
+function setupPathDisplayListener(row, filePath) {
+  row.querySelector(".pathDisplay").addEventListener("click", () => {
+    const filePathToCopy = getPathForOs(filePath, false);
+    copyToClipboard(filePathToCopy);
+    showPath(filePathToCopy);
+  });
+}
+
+function setupKeywordsContainerListener(row) {
+  row.querySelector(".keywordsContainer").addEventListener("click", (event) => {
+    const keyword = event.target.innerText;
+    if (
+      event.target.classList.contains("keyword-capsule") ||
+      event.target.parentElement.classList.contains("keyword-capsule")
+    ) {
+      toggleKeyword(keyword);
+    }
+  });
+}
+
+function setupThumbnailHover(row, thumbnails) {
+  let currentThumbnailIndex = THUMBNAIL_INDEX;
+  let interval;
+
+  const thumbnail = row.querySelector(".thumbnail");
+  thumbnail.addEventListener("mouseenter", function () {
+    interval = setInterval(() => {
+      currentThumbnailIndex = (currentThumbnailIndex + 1) % thumbnails.length;
+      this.src = getThumbnailPathRelative(thumbnails[currentThumbnailIndex]);
+    }, FLIP_THROUGH_INTERVAL);
+  });
+
+  thumbnail.addEventListener("mouseleave", function () {
+    clearInterval(interval);
+    this.src = getThumbnailPathRelative(thumbnails[THUMBNAIL_INDEX]);
+    currentThumbnailIndex = 0;
+  });
+}
+
+function setupThumbnailClick(row, filePath) {
+  row.querySelector(".thumbnail").addEventListener("click", () => {
+    const filePathToCopy = getPathForOs(filePath, true);
+    copyToClipboard(filePathToCopy);
+    showPath(filePathToCopy);
+  });
+}
+
+function setupEditKeywordsButton(row, video) {
+  const checkbox = row.querySelector(".edit-keywords-checkbox");
+  checkbox.addEventListener("change", (event) => {
+    toggleSelectRowCheckbox(row);
+    console.log("checkbox clicked");
+  });
+
+  row.addEventListener("click", (event) => {
+    if (isHoldingCtrl) {
+      toggleSelectRowCheckbox(row, true);
+    }
+  });
+}
+
+function toggleSelectRowCheckbox(row, toogle = false) {
+  const checkbox = row.querySelector(".edit-keywords-checkbox");
+  if (toogle) {
+    checkbox.checked = !checkbox.checked;
+  }
+
+  if (checkbox.checked) {
+    row.classList.add("selected-video-row");
+  } else {
+    row.classList.remove("selected-video-row");
+  }
+}
+
+function displayNoResultsMessage() {
+  const noResultsMessage = document.createElement("tr");
+  noResultsMessage.classList.add("no-results");
+  noResultsMessage.innerHTML = `<td colspan="8">No videos found for the search query.</td>`;
+  videoResults.appendChild(noResultsMessage);
+}
+
+function showPath(path) {
+  alert(path);
+}
+
+function getPathForOs(path, removeFileName = false, removeDrivePath = false) {
+  if (removeFileName) {
+    path = path.substring(0, path.lastIndexOf("\\"));
+  }
+
+  if (removeDrivePath) {
+    path = path.replace(
+      "V:\\zentrale-einrichtungen\\Kommunikation u. Marketing\\Marketing\\Videos\\",
+      ""
+    );
+  }
+
+  if (isAppleMac()) {
+    path = path.replace("V:", "/Volumes/verteiler");
+    path = path.replace(/\\/g, "/");
+  }
+
+  return path;
+}
+
+function isAppleMac() {
+  if (navigator.userAgent.toLowerCase().includes("mac")) {
+    return true;
+  } else {
+    return false;
+  }
+}
+
+function isWindows() {
+  return navigator.userAgent.toLowerCase().includes("windows");
+}
+
+function addToKeywordsToSearch(keyword) {
+  keywordsToSearchList.push(keyword);
+
+  let div = document.createElement("div");
+  let span = document.createElement("span");
+  span.innerHTML = keyword;
+  div.appendChild(span);
+
+  let button = document.createElement("button");
+  button.innerHTML = "x";
+  button.onclick = function () {
+    this.parentElement.remove();
+    removeFromKeywordsToSearch(keyword);
+    updateVideosDisplayed();
+  };
+  div.appendChild(button);
+
+  document.getElementById("keywordsToSearch").appendChild(div);
+
+  searchBar.value = "";
+
+  updateVideosDisplayed();
+}
+
+function removeFromKeywordsToSearch(keyword) {
+  keywordsToSearchList = keywordsToSearchList.filter(
+    (item) => item !== keyword
+  );
+
+  let elements = document.getElementById("keywordsToSearch").children;
+
+  for (let i = 0; i < elements.length; i++) {
+    const textContainer = elements[i].querySelector("span");
+    if (textContainer.innerText === keyword) {
+      elements[i].remove();
+    }
+  }
+
+  updateVideosDisplayed();
+}
+
+function toggleKeyword(keyword) {
+  if (keywordsToSearchList.includes(keyword)) {
+    removeFromKeywordsToSearch(keyword);
+  } else {
+    addToKeywordsToSearch(keyword);
+  }
+}
+function checkKeywordMatch(keywordInSearch, keywordInVideo) {
+  const searchKeyword = keywordInSearch.toLowerCase().trim();
+  const videoKeyword = keywordInVideo.toLowerCase().trim();
+
+  if (videoKeyword === searchKeyword) {
+    return true;
+  }
+
+  const videoKeywordSplit = keywordInVideo.split(" ");
+  for (const videoKeywordSplitElement of videoKeywordSplit) {
+    const videoKeywordSplit = videoKeywordSplitElement.toLowerCase().trim();
+    if (videoKeywordSplit === searchKeyword) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+let isHoldingCtrl = false;
+let isHoldingAlt = false;
+
+document.addEventListener("keydown", function (event) {
+  const ctrl = event.ctrlKey || event.metaKey;
+
+  if (ctrl) {
+    isHoldingCtrl = true;
+  }
+  if (event.key === "Alt") {
+    isHoldingAlt = true;
+  }
+
+  if (ctrl && event.key === "a") {
+    event.preventDefault(); 
+    const checkboxes = document.querySelectorAll(".edit-keywords-checkbox");
+
+    const allCheckboxesAreCheckted = Array.from(checkboxes).every(
+      (checkbox) => checkbox.checked
+    );
+
+    if (allCheckboxesAreCheckted) {
+      checkboxes.forEach((checkbox) => {
+        checkbox.checked = false;
+        toggleSelectRowCheckbox(checkbox.parentElement.parentElement);
+      });
+    } else {
+      checkboxes.forEach((checkbox) => {
+        checkbox.checked = true;
+        toggleSelectRowCheckbox(checkbox.parentElement.parentElement);
+      });
+    }
+  } else if (event.key === "Escape") {
+    if (editWindowIsOpen()) {
+      hideEditWindow();
+      saveKeywordChanges();
+      return;
+    }
+
+    const checkboxes = document.querySelectorAll(".edit-keywords-checkbox");
+    checkboxes.forEach((checkbox) => {
+      checkbox.checked = false;
+      toggleSelectRowCheckbox(checkbox.parentElement.parentElement);
+    });
+  } else if (ctrl && event.key === "e") {
+    event.preventDefault(); 
+    console.log("Edit button pressed");
+    document.getElementById("edit-selected-videos-keywords-btn").click();
+  } else if (ctrl && event.key === "ArrowUp") {
+    window.scrollTo({ top: 0, behavior: "auto" });
+  } else if (ctrl && event.key === "ArrowDown") {
+    window.scrollTo({ top: document.body.scrollHeight, behavior: "auto" });
+  }
+});
+
+document.addEventListener("keyup", function (event) {
+  if (event.key === "Control" || event.key === "Meta") {
+    isHoldingCtrl = false;
+  }
+  if (event.key === "Alt") {
+    isHoldingAlt = false;
+  }
+});
+
+document.addEventListener("blur", function (event) {
+  isHoldingCtrl = false;
+  isHoldingAlt = false;
+
+  console.log("blur", event);
+});
+
+document.addEventListener("mousedown", function (event) {
+  isHoldingCtrl = event.ctrlKey || event.metaKey;
+  isHoldingAlt = event.altKey;
+});
+
+document.addEventListener("mouseup", function (event) {
+  isHoldingCtrl = event.ctrlKey || event.metaKey;
+  isHoldingAlt = event.altKey;
+});
+
+main();

@@ -9,7 +9,7 @@ videoKeywordChangesPath = 'static/videoKeywordChanges.json'
 
 @app.route('/')
 def list_view():
-    return render_template('indexListView.html')
+    return render_template('index.html')
 
 @app.route('/saveKeywordChanges', methods=['POST'])
 def saveKeywordChanges():
