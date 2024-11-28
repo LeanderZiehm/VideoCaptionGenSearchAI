@@ -175,4 +175,4 @@ function fillFPSAndRatioAndMinMaxDateDropdownFilters() {
     .join("")}<option value="unknown">unknown</option>`;
 }
 
-document.addEventListener("DOMContentLoaded", setup_headerInputs);
+// document.addEventListener("DOMContentLoaded", setup_headerInputs);

@@ -14,6 +14,8 @@ sortSettings.sortBy = "date";
 sortSettings.isAscending = false;
 
 function main() {
+
+  setup_headerInputs();
   setup();
   updateVideosDisplayed();
   getKeywordChangesFromServer();
@@ -170,6 +172,7 @@ function sortVideos(videosToSort) {
 }
 
 function displayVideos(videos) {
+  console.log("Displaying videos", videos);
   currentlyDisplayingVideos = videos;
   const displayingText = `Displaying ${currentlyDisplayingVideos.length} out of ${globalFilteredVideos.length} videos`;
   pageVideoCount.innerHTML = displayingText;
