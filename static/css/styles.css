@@ -1,218 +1,217 @@
-:root{
+:root {
   --blue: rgb(41, 121, 255);
   --white: #ffffff;
-}      
-      
-      body {
-        font-family: "Times New Roman", Times, serif;
-        background-color: rgba(0, 0, 0, 0.85);
-        color: white;
+}
 
-        padding: 40px;
-      }
+body {
+  font-family: "Times New Roman", Times, serif;
+  background-color: rgba(0, 0, 0, 0.85);
+  color: white;
 
-      input,
-      select,
-      button {
-        border-radius: 20px;
-        padding: 10px;
-        margin-right: 10px;
-        margin-bottom: 10px;
-        cursor: pointer;
-      }
+  padding: 40px;
+}
 
+input,
+select,
+button {
+  border-radius: 20px;
+  padding: 10px;
+  margin-right: 10px;
+  margin-bottom: 10px;
+  cursor: pointer;
+}
 
-      
+button {
+  background-color: #444;
+  color: white;
+  border: none;
+}
 
+button:hover {
+  background-color: #666;
+}
 
-      button {
-        background-color: #444;
-        color: white;
-        border: none;
-      }
+.container {
+  width: 95%;
+  /* margin: 0 auto; */
+}
 
-      button:hover {
-        background-color: #666;
-      }
+#search-bar {
+  width: 100%;
+  padding: 10px;
+  margin: 20px 0;
+}
+#search-bar:focus {
+  outline: none;
+  border: 1px solid var(--blue);
+  box-shadow: 0 0 20px var(--blue);
+}
 
-      .container {
-        width: 95%;
-        /* margin: 0 auto; */
-      }
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 20px;
+}
 
-      #search-bar {
-        width: 100%;
-        padding: 10px;
-        margin: 20px 0;
-      }
-      #search-bar:focus {
-        outline: none;
-        border: 1px solid var(--blue);
-        box-shadow: 0 0 20px var(--blue);
-      }
+th,
+td {
+  padding: 10px;
+  text-align: left;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+}
 
- 
+th {
+  cursor: pointer;
+  background-color: rgba(0, 0, 0, 0.2);
+}
 
-      table {
-        width: 100%;
-        border-collapse: collapse;
-        margin-bottom: 20px;
-      }
+th:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
 
-      th,
-      td {
-        padding: 10px;
-        text-align: left;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.2);
-      }
+th[data-sort],
+th[data-sort="date"],
+th[data-sort="length"],
+th[data-sort="size"],
+th[data-sort="ratio"],
+th[data-sort="fps"] {
+  cursor: pointer;
+}
 
-      th {
-        cursor: pointer;
-        background-color: rgba(0, 0, 0, 0.2);
-      }
+th[data-sort="date"]:hover,
+th[data-sort="length"]:hover,
+th[data-sort="size"]:hover,
+th[data-sort="ratio"]:hover,
+th[data-sort="fps"]:hover {
+  background-color: var(--blue);
+  color: var(--white);
+}
 
-      th:hover {
-        background-color: rgba(255, 255, 255, 0.1);
-      }
+td img {
+  width: 100%;
+  border-radius: 10px;
+}
+.thumbnail {
+  min-width: 600px;
+  cursor: pointer;
+}
 
-      th[data-sort], th[data-sort="date"], th[data-sort="length"], th[data-sort="size"], th[data-sort="ratio"], th[data-sort="fps"] {
-        cursor: pointer;
-      }
-      
-      
-      th[data-sort="date"]:hover, th[data-sort="length"]:hover, th[data-sort="size"]:hover, th[data-sort="ratio"]:hover, th[data-sort="fps"]:hover {
-        background-color: var(--blue);
-        color: var(--white);
-      }
-  
+.keyword-capsule {
+  display: inline-block;
+  background-color: rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  padding: 5px 10px;
+  margin-right: 5px;
+  margin-bottom: 5px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.keyword-capsule:hover {
+  background-color: var(--blue);
+}
 
-      td img {
-        width: 100%;
-        border-radius: 10px;
-      }
-      .thumbnail {
-        min-width: 600px;
-        cursor: pointer;
-      }
+.pathDisplay {
+  display: inline-block;
+  background-color: rgba(255, 255, 255, 0.2);
+  padding: 5px 10px;
+  margin-right: 5px;
+  margin-bottom: 5px;
+  font-size: 12px;
+  cursor: pointer;
+}
 
-      .keyword-capsule {
-        display: inline-block;
-        background-color: rgba(255, 255, 255, 0.2);
-        border-radius: 12px;
-        padding: 5px 10px;
-        margin-right: 5px;
-        margin-bottom: 5px;
-        font-size: 12px;
-        cursor: pointer;
-      }
-      .keyword-capsule:hover {
-        background-color: var(--blue);
-      }
+.no-results {
+  color: red;
+  font-size: 18px;
+}
 
+.edit-keywords-modal {
+  display: none;
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background-color: #333;
+  padding: 20px;
+  border-radius: 10px;
+  z-index: 1000;
+}
 
+.edit-keywords-modal input {
+  margin-right: 10px;
+}
 
-      .pathDisplay {
-        display: inline-block;
-        background-color: rgba(255, 255, 255, 0.2);
-        padding: 5px 10px;
-        margin-right: 5px;
-        margin-bottom: 5px;
-        font-size: 12px;
-        cursor: pointer;
-      }
+#editKeywordsWindow {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.7);
+  z-index: 999;
+}
 
-      .no-results {
-        color: red;
-        font-size: 18px;
-      }
+th {
+  position: relative;
 
-      .edit-keywords-modal {
-        display: none;
-        position: fixed;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        background-color: #333;
-        padding: 20px;
-        border-radius: 10px;
-        z-index: 1000;
-      }
+  user-select: none;
+}
 
-      .edit-keywords-modal input {
-        margin-right: 10px;
-      }
+.resize-handle {
+  position: absolute;
+  width: 5px;
 
-      .modal-overlay {
-        display: none;
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background-color: rgba(0, 0, 0, 0.7);
-        z-index: 999;
-      }
+  top: 0;
+  right: 0;
 
-      th {
-        position: relative;
+  cursor: col-resize;
 
-        user-select: none;
-      }
+  height: 100%;
+  z-index: 1;
+}
 
-      .resize-handle {
-        position: absolute;
-        width: 5px;
+#keywordsToSearch {
+  display: flex;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
 
-        top: 0;
-        right: 0;
+#keywordsToSearch div {
+  background-color: rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  padding: 5px 10px;
+  margin-right: 5px;
+  margin-bottom: 5px;
+  font-size: 12px;
+}
 
-        cursor: col-resize;
+.selected-video-row {
+  background-color: rgba(0, 153, 255, 0.493);
+}
+.highlighted {
+  background-color: rgb(0, 153, 255);
+  color: rgba(0, 0, 0, 0.6);
+}
+.keywordsContainer {
+  min-width: 700px;
+}
 
-        height: 100%;
-        z-index: 1;
-      }
+#loadMore {
+  display: flex;
+  justify-content: center; /* Centers the span horizontally inside #loadMore */
+  align-items: center; /* Centers the span vertically inside #loadMore */
 
-      #keywordsToSearch {
-        display: flex;
-        flex-wrap: wrap;
-        margin-bottom: 20px;
-      }
+  background-color: rgba(0, 0, 0, 0.5);
+  padding: 10px 20px;
+  border-radius: 10px;
+  width: fit-content; /* Optional: Adjusts the width to fit the content */
+  margin: auto; /* Optional: To center #loadMore within its container if needed */
+}
 
-      #keywordsToSearch div {
-        background-color: rgba(255, 255, 255, 0.2);
-        border-radius: 12px;
-        padding: 5px 10px;
-        margin-right: 5px;
-        margin-bottom: 5px;
-        font-size: 12px;
-      }
-
-      .selected-video-row {
-        background-color: rgba(0, 153, 255, 0.493);
-      }
-      .highlighted {
-        background-color: rgb(0, 153, 255);
-        color: rgba(0, 0, 0, 0.6);
-      }
-      .keywordsContainer {
-        min-width: 700px;
-      }
-
-      #loadMore {
-        display: flex;
-        justify-content: center; /* Centers the span horizontally inside #loadMore */
-        align-items: center; /* Centers the span vertically inside #loadMore */
-
-        background-color: rgba(0, 0, 0, 0.5);
-        padding: 10px 20px;
-        border-radius: 10px;
-        width: fit-content; /* Optional: Adjusts the width to fit the content */
-        margin: auto; /* Optional: To center #loadMore within its container if needed */
-      }
-
-      #loadMore span {
-        text-align: center; /* Ensures the text within the span is centered */
-      }
-      #edit-selected-videos-keywords-btn{
-        float: right;
-      }
+#loadMore span {
+  text-align: center; /* Ensures the text within the span is centered */
+}
+#edit-selected-videos-keywords-btn {
+  float: right;
+}

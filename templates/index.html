@@ -1,106 +1,105 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Video Keyword Search</title>
-    <script src="{{ url_for('static', filename='videoKeywordsOLD_Processed.js') }}"></script>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
 
-  </head>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Video Keyword Search</title>
+  <script src="{{ url_for('static', filename='videoKeywordsOLD_Processed.js') }}"></script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}" />
+</head>
 
-  <body>
-    <div class="modal-overlay"></div>
-    <div class="edit-keywords-modal" >   <!--  ?style="position: relative;" -->
-      <h3>Edit Keywords</h3>
-      <button id="save-keywords-btn" style="position: absolute; top: 10px; right: 10px;" >X</button>
-      <div id="edit-keywords-list"></div>
-      <input type="text" id="new-keyword" placeholder="Add new keyword" style="width: 80%;" />
-      <button id="add-keyword-btn" style="padding: 20px; background-color: rgb(0, 153, 255);">Add</button>
+<body>
+  <div id="editKeywordsWindow">
+
+  </div>
+
+  <div class="container">
+    <div id="filters">
+      <label for="fps-filter">FPS:</label>
+      <select id="fps-filter">
+        <option value="">All</option>
+      </select>
+      <label for="ratio-filter">Ratio:</label>
+      <select id="ratio-filter">
+        <option value="">All</option>
+      </select>
+      <label for="minDate">Min Date:</label>
+      <input type="date" id="minDate" class="date-input" />
+
+      <label for="maxDate">Max Date:</label>
+      <input type="date" id="maxDate" class="date-input" />
+
+      <label for="path-filter">Path:</label>
+      <select id="path-filter">
+        <option value="">All</option>
+      </select>
     </div>
 
-    <div class="container">
-      <div id="filters">
-        <label for="fps-filter">FPS:</label>
-        <select id="fps-filter">
-          <option value="">All</option>
-        </select>
-        <label for="ratio-filter">Ratio:</label>
-        <select id="ratio-filter">
-          <option value="">All</option>
-        </select>
-        <label for="minDate">Min Date:</label>
-        <input type="date" id="minDate" class="date-input" />
+    <input type="text" id="search-bar" placeholder="Search for captions..." />
 
-        <label for="maxDate">Max Date:</label>
-        <input type="date" id="maxDate" class="date-input" />
+    <label for="strict-search">Strict Search</label>
+    <input type="checkbox" id="strict-search" name="strict-search" value="strict-search" />
 
-        <label for="path-filter">Path:</label>
-        <select id="path-filter">
-          <option value="">All</option>
-        </select>
-      </div>
+    <label for="match-in-path">Match in Path</label>
+    <input type="checkbox" id="match-in-path" name="match-in-path" value="match-in-path" />
 
-      <input type="text" id="search-bar" placeholder="Search for captions..." />
-    
+    <div id="keywordsToSearch"></div>
 
-      <label for="strict-search">Strict Search</label>
-      <input type="checkbox" id="strict-search" name="strict-search" value="strict-search">
+    <label id="pageVideoCount">pageVideoConunt NOT ASSIGNED</label>
 
-      <label for="match-in-path">Match in Path</label>
-      <input type="checkbox" id="match-in-path" name="match-in-path" value="match-in-path">
+    <button id="edit-selected-videos-keywords-btn">Edit Selected</button>
 
-      <div id="keywordsToSearch"></div>
+    <table>
+      <thead>
+        <tr>
+          <th style="width: 300px">
+            Thumbnail
+            <div class="resize-handle"></div>
+          </th>
+          <th style="width: 600px">
+            Keywords
+            <div class="resize-handle"></div>
+          </th>
 
-      <label id="pageVideoCount">pageVideoConunt NOT ASSIGNED</label>
+          <th data-sort="date">
+            Date Created
+            <div class="resize-handle"></div>
+          </th>
+          <th data-sort="length">
+            Length (s)
+            <div class="resize-handle"></div>
+          </th>
+          <th data-sort="size">
+            Size (MB)
+            <div class="resize-handle"></div>
+          </th>
+          <th data-sort="ratio">
+            Ratio
+            <div class="resize-handle"></div>
+          </th>
+          <th data-sort="fps">
+            FPS
+            <div class="resize-handle"></div>
+          </th>
+          <th>
+            Edit
+            <div class="resize-handle"></div>
+          </th>
+        </tr>
+      </thead>
+      <tbody id="video-results"></tbody>
+    </table>
+  </div>
 
-      <button id="edit-selected-videos-keywords-btn">Edit Selected</button>
+  <div id="loadMore">Displaying X out of Y videos</div>
 
-      <table>
-        <thead>
-          <tr>
-            <th style="width: 300px">
-              Thumbnail
-              <div class="resize-handle"></div>
-            </th>
-            <th style="width: 600px">
-              Keywords
-              <div class="resize-handle"></div>
-            </th>
-        
+  <script src="{{ url_for('static', filename='js/videoRow.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/headerInputs.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/videoKeywords.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/keyboardShortcuts.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/editKeywordsWindow.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
 
-            <th data-sort="date">
-              Date Created
-              <div class="resize-handle"></div>
-            </th>
-            <th data-sort="length">
-              Length (s)
-              <div class="resize-handle"></div>
-            </th>
-            <th data-sort="size">
-              Size (MB)
-              <div class="resize-handle"></div>
-            </th>
-            <th data-sort="ratio">
-              Ratio
-              <div class="resize-handle"></div>
-            </th>
-            <th data-sort="fps">
-              FPS
-              <div class="resize-handle"></div>
-            </th>
-            <th>
-              Edit
-              <div class="resize-handle"></div>
-            </th>
-          </tr>
-        </thead>
-        <tbody id="video-results"></tbody>
-      </table>
-    </div>
-
-    <div id="loadMore">Displaying X out of Y videos</div>
-
-    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
-  </body>
 </html>
