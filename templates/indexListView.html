@@ -4,13 +4,15 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Video Keyword Search</title>
-    <script src="{{ url_for('static', filename='videoKeywordsOLD.js') }}"></script>
+    <script src="{{ url_for('static', filename='videoKeywordsOLD_Processed.js') }}"></script>
 
     <style>
       body {
         font-family: "Times New Roman", Times, serif;
         background-color: rgba(0, 0, 0, 0.85);
         color: white;
+
+        padding: 40px;
       }
 
       input,
@@ -35,7 +37,7 @@
 
       .container {
         width: 95%;
-        margin: 0 auto;
+        /* margin: 0 auto; */
       }
 
       #search-bar {
@@ -188,24 +190,21 @@
         text-align: center; /* Ensures the text within the span is centered */
       }
       #edit-selected-videos-keywords-btn{
-        /* //move to the right */
         float: right;
-        
-        /* margin-right: 100px; */
-        /* margin-left: 500px; */
       }
     </style>
   </head>
 
   <body>
     <div class="modal-overlay"></div>
-    <div class="edit-keywords-modal">
+    <div class="edit-keywords-modal" >   <!--  ?style="position: relative;" -->
       <h3>Edit Keywords</h3>
+      <button id="save-keywords-btn" style="position: absolute; top: 10px; right: 10px;" >X</button>
       <div id="edit-keywords-list"></div>
-      <input type="text" id="new-keyword" placeholder="Add new keyword" />
-      <button id="add-keyword-btn">Add</button>
-      <button id="save-keywords-btn">Save</button>
-      <button id="cancel-edit-btn">cancel</button>
+      <input type="text" id="new-keyword" placeholder="Add new keyword" style="width: 80%;" />
+      <button id="add-keyword-btn" style="padding: 20px; background-color: rgb(0, 153, 255);">Add</button>
+      <!-- <button id="save-keywords-btn">Save</button> -->
+      <!-- <button id="cancel-edit-btn">cancel</button> -->
     </div>
 
     <div class="container">
@@ -232,9 +231,12 @@
 
       <input type="text" id="search-bar" placeholder="Search for captions..." />
     
-      <!-- //add lable  -->
+
       <label for="strict-search">Strict Search</label>
       <input type="checkbox" id="strict-search" name="strict-search" value="strict-search">
+
+      <label for="match-in-path">Match in Path</label>
+      <input type="checkbox" id="match-in-path" name="match-in-path" value="match-in-path">
 
       <div id="keywordsToSearch"></div>
 
@@ -286,7 +288,7 @@
       </table>
     </div>
 
-    <div id="loadMore">Displaying 22 out of 22 videos</div>
+    <div id="loadMore">Displaying X out of Y videos</div>
 
     <script>
       let MAX_VIDEOS_PER_PAGE = 100;
@@ -422,6 +424,7 @@
           });
 
           document.getElementById("strict-search").addEventListener("change", updateVideosDisplayed);
+          document.getElementById("match-in-path").addEventListener("change", updateVideosDisplayed);
 
         document
           .getElementById("add-keyword-btn")
@@ -444,12 +447,12 @@
             saveKeywordChanges();
           });
 
-        document
-          .getElementById("cancel-edit-btn")
-          .addEventListener("click", () => {
-            hideEditWindow();
-            clearVideoToEdit();
-          });
+        // document
+        //   .getElementById("cancel-edit-btn")
+        //   .addEventListener("click", () => {
+        //     hideEditWindow();
+        //     clearVideoToEdit();
+        //   });
 
         tableHeaders.forEach((header) => {
           header.addEventListener("click", () => {
@@ -518,6 +521,15 @@
       const currentKeywordChanges = { path: "", add: [], remove: [] };
 
       function saveKeywordChanges() {
+
+
+        const addedOrRemovedSomething = currentKeywordChanges.add.length > 0 || currentKeywordChanges.remove.length > 0;
+
+        if(!addedOrRemovedSomething){
+          console.log("No changes to save");
+          return;
+        }
+
         console.log("Saving keyword changes", currentKeywordChanges);
         applyChange(currentKeywordChanges);
         //send to server with fetch /saveKeywordChanges
@@ -779,7 +791,7 @@ function applyChange(change){
               );
 
 
-              console.log("keyword", keyword, "matchedKeyword", matchedKeyword);
+              // console.log("keyword", keyword, "matchedKeyword", matchedKeyword);
 
             //   keyword = keyword.replace(
             //     matchedKeyword,
@@ -822,51 +834,74 @@ function applyChange(change){
       function videoMatchesSearch(video) {
         let matchesSearch = false;
 
-        // const hasToMatchAllKeywords = true; //  TODO
-        // strict-search
-        const hasToMatchAllKeywords = document.getElementById("strict-search").checked;
+        const strictSearch = document.getElementById("strict-search").checked;
+        const matchInPath = document.getElementById("match-in-path").checked;
 
-        // const hasToMatchAllKeywords = true;
+        let allKeywordsMatched = true;//#####
+          for (let keywordInSearch of keywordsToSearchList) {
 
-        if(hasToMatchAllKeywords == false){
-          for (const keywordInSearch of keywordsToSearchList) {
-          for (const keywordVideo of video.keywords) {
-            if (
-              checkKeywordMatch(keywordInSearch, keywordVideo)
-            ) {
-              matchesSearch = true;
-              break;
-            }
-
-            if (keywordIsInVideoPath(video, keywordInSearch)) {
-              matchesSearch = true;
-            }
-          }
-        }
-        }else{
-          let allKeywordsMatched = true;//#####
-          for (const keywordInSearch of keywordsToSearchList) {
             let keywordMatched = false;
             for (const keywordVideo of video.keywords) {
-              if (
-                checkKeywordMatch(keywordInSearch, keywordVideo)
-              ) {
+              if (checkKeywordMatch(keywordInSearch, keywordVideo)) {
                 keywordMatched = true;
                 break;
               }
             }
 
-            if (!keywordMatched) {
+            if(matchInPath){
+              if (keywordIsInVideoPath(video, keywordInSearch)) {
+                keywordMatched = true;  // TODO: Think about if this makes sense or should be keywordMatched
+              }
+            }
+
+
+            if (keywordInSearch.startsWith("!")) {
+              // console.log("negativeSearch", keywordInSearch);
+              // keywordInSearch = keywordInSearch.replace("!", "");
+              const negativeSearchKeyword = keywordInSearch.replace("!", "");
+              // console.log("negativeSearch clean", keywordInSearch);
+              if (video.keywords.includes(negativeSearchKeyword)) {
+                // console.log("negativeSearch", negativeSearchKeyword,"in video", video.keywords);
+                keywordMatched = false;
+                // break;
+              }else{
+                keywordMatched = true;
+              }
+            }
+
+
+
+
+            if(strictSearch){
+              if (!keywordMatched) {
               allKeywordsMatched = false;
               break;
             }
+            }
+            else{
+              matchesSearch = keywordMatched;
+            }
+
+           
           }
 
-          matchesSearch = allKeywordsMatched;
-        }
-
-  
-
+          if(strictSearch){
+            matchesSearch = allKeywordsMatched;
+          }
+          // else{
+          //   matchesSearch = keywordMatched;
+          // }
+//         const negativeSearch = keywordInSearch.startsWith("!");
+// if (negativeSearch){
+//   keywordInSearch = keywordInSearch.replace("!", "");
+//   console.log("negativeSearch", keywordInSearch);
+// }
+          // if (negativeSearch){
+          //   if (matchesSearch){
+          //     matchesSearch = false;
+          //   }
+          // }
+          
         if (keywordsToSearchList.length == 0) {
           matchesSearch = true;
         }
@@ -1034,13 +1069,13 @@ function applyChange(change){
         }
 
         console.log("Next page");
-        console.log(
-          "Current index",
-          indexVideoPage,
-          globalFilteredVideos.length,
-          MAX_VIDEOS_PER_PAGE,
-          MAX_VIDEOS_PER_PAGE * (indexVideoPage + 1)
-        );
+        // console.log(
+        //   "Current index",
+        //   indexVideoPage,
+        //   globalFilteredVideos.length,
+        //   MAX_VIDEOS_PER_PAGE,
+        //   MAX_VIDEOS_PER_PAGE * (indexVideoPage + 1)
+        // );
         indexVideoPage++;
 
         updateVideosDisplayed();
@@ -1164,6 +1199,10 @@ function applyChange(change){
 
         const div = document.createElement("div");
         let highlighted = "";
+
+        const matchInPath = document.getElementById("match-in-path").checked;
+        if (matchInPath) {
+
         for (const keywordInSearch of keywordsToSearchList) {
           if (keywordIsInVideoPath(video, keywordInSearch)) {
             highlighted = "highlighted";
@@ -1176,6 +1215,7 @@ function applyChange(change){
             break;
           }
         }
+      }
 
         const pathHTML = `<div class="pathDisplay ${highlighted}">${path}</div>`;
         return pathHTML;
@@ -1229,16 +1269,8 @@ function applyChange(change){
           if(isHoldingAlt){
             //change dropdown to select the path 
             const pathFilter = document.getElementById("path-filter");
-
             const rootPath = getRootPath(filePath);
-            // const toSet =  filePath.split("\\")[0];
-            // console.log("toSet", toSet);
-            // get all options of pathfilter
-            // const options = pathFilter.options;
-            // console.log("options", options);
             pathFilter.value = rootPath;
-
-
             updateVideosDisplayed();
             return;
           }
@@ -1524,7 +1556,13 @@ if(toogle){
           //edit button pressed
           // id="edit-selected-videos-keywords-btn"
           document.getElementById("edit-selected-videos-keywords-btn").click();
+        }else if(ctrl && event.key === "ArrowUp") {
+        window.scrollTo({ top: 0, behavior: "auto" });
+        }else if(ctrl && event.key === "ArrowDown") {
+        window.scrollTo({ top: document.body.scrollHeight, behavior: "auto" });
         }
+
+
       });
 
       document.addEventListener("keyup", function (event) {
@@ -1534,6 +1572,27 @@ if(toogle){
        if(event.key === "Alt"){
          isHoldingAlt = false;
        }
+      });
+
+
+      //on lose focus make isHoldingCtrl false and isHoldingAlt false
+      document.addEventListener("blur", function (event) {
+        isHoldingCtrl = false;
+        isHoldingAlt = false;
+
+        console.log("blur", event);
+      });
+
+      //on mouse down and up update isHoldingCtrl and isHoldingAlt
+      document.addEventListener("mousedown", function (event) {
+        isHoldingCtrl = event.ctrlKey || event.metaKey;
+        isHoldingAlt = event.altKey;
+      });
+
+      document.addEventListener("mouseup", function (event) {
+        // console.log("mouseup", event);
+        isHoldingCtrl = event.ctrlKey || event.metaKey;
+        isHoldingAlt = event.altKey;
       });
 
 
