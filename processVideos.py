@@ -22,7 +22,7 @@ modelName = "llava"
 
 
 tookLoadTime = time.time() - initTime
-print(f"Load Time: {tookLoadTime}")
+print(f"init import Time: {tookLoadTime}")
 
 
 logging.basicConfig(
@@ -45,11 +45,16 @@ VIDEO_KEYWORDS_FILE = "static/videoKeywords.js"
 PROCESSED_PATH = "static/processed/"
 
 
+
+
+
+
 def main():
     loadedJsonData = loadJsonData()
     processedVideoCount = 0
     skippedVideoCount = 0
     errors = []
+    ALL_FILES_PATHS = []
     
     stopEarly = False
 
@@ -60,6 +65,7 @@ def main():
             break
         
         for file in files:
+            
             if (processedVideoCount >= MAX_VIDEO_COUNT) and (MAX_VIDEO_COUNT != -1):
                 print(
                     f"[{MAX_VIDEO_COUNT} processed. Stopping because it's the MAX_VIDEO_COUNT.]"
@@ -69,6 +75,8 @@ def main():
 
             if any(file.lower().endswith(ext) for ext in video_formats):
                 filepath = os.path.join(subdir, file)
+                
+                ALL_FILES_PATHS.append(filepath)
 
                 if filepath in [video["path"] for video in loadedJsonData["videos"]]:
                     skippedVideoCount += 1
@@ -93,16 +101,14 @@ def main():
                 processedVideoCount += 1
 
     print(f"skippedVideoCount: {skippedVideoCount}")
-
-
     # loadedJsonData['uniqueMetadata'] = calculateUniqueMetadata(loadedJsonData['videos'])
-    
     # print(loadedJsonData['uniqueMetadata'])
     # print(loadedJsonData)
     # saveToJsFile(loadedJsonData)
-    
-    
     # print('Unique Metadata: ', loadedJsonData['uniqueMetadata'])
+    
+    tagAllRemovedVideos(loadedJsonData,ALL_FILES_PATHS)
+    
 
     print(f"Processed {processedVideoCount} videos.")
     print(f"Erorrs: {errors}")
@@ -128,6 +134,23 @@ def main():
     
 #     return uniqueMetadata
 
+
+
+def tagAllRemovedVideos(loadedJsonData,ALL_FILES_PATHS):
+    count = 0
+    for video in loadedJsonData['videos']:
+        if video['path'] not in ALL_FILES_PATHS:
+            video['removed'] = True
+            count += 1
+            print(video['path'])
+            
+            
+    print(f"Tagged {count} removed videos")
+    saveToJsFile(loadedJsonData)
+    # print("Tagged all removed videos")
+    
+
+
 def extract_text(image_path):
     result = reader.readtext(image_path, detail=0)
     # print(result)
@@ -141,7 +164,7 @@ def processVideo(video_path):
     keywords = set()
     ocrs = set()
     for frame_path in scene_frames_paths:
-        print(f"\n###{frame_path}###")
+        print(f"###{frame_path}###")
         generatedKeywords = generate_keywords(frame_path)
         # print(f"Generated Keywords: {generatedKeywords}")
 
@@ -181,28 +204,10 @@ def generate_keywords(image_path):
     # "Write 3 keywords describing this image. Only add keywords you are very confident about matching the image. Return comma seperated keywords in the same line.",
     
     prompt =  "Write 9 keywords describing this image. Return comma seperated keywords in the same line."
-    # promptOCR1 =   "Is there any text in this image? You are only allowed to answer 'yes' or 'no'."
-    # promptOCR2 =   "Extract text from this image."
-
-
-
     keywordsText = run_ollama(prompt, image_path)
     keywordsText = keywordsText.replace(".", "")
+    keywordsText = keywordsText.lower()
     keywords = keywordsText.split(",")
-    
-    # isOCR_YES_NO = run_ollama(promptOCR1, image_path)
-
-    # if "yes" in isOCR_YES_NO.lower():
-        # ocr_text = run_ollama(promptOCR2, image_path)
-        # keywords.append(ocr_text)
-        # keywords.append(f'"{ocr_text}"')
-            
-
-    
-
-    
-
-    # print(f"Keywords: {keywords}")
     return keywords
 
 def run_ollama(prompt, imagePath):
@@ -211,6 +216,7 @@ def run_ollama(prompt, imagePath):
     stream = ollama.generate(
         model=modelName, prompt=prompt, images=[imagePath], stream=True
     )
+    print("")
     for chunk in stream:
         print(chunk["response"], end="", flush=True)
         result += chunk["response"]
@@ -327,7 +333,7 @@ def save_info_log(message):
 
     log_entry = f"{timestamp} - {message}\n"
 
-    print(log_entry)
+    print(f"\n #### INFO{log_entry} ####\n")
 
     with open("info_log.txt", "a") as f:
         f.write(log_entry)

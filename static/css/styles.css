@@ -11,13 +11,18 @@ body {
   padding: 40px;
 }
 
+
+input,
+select{
+  margin-right: 10px;
+  margin-bottom: 10px;
+}
+
 input,
 select,
 button {
   border-radius: 20px;
   padding: 10px;
-  margin-right: 10px;
-  margin-bottom: 10px;
   cursor: pointer;
 }
 
@@ -27,8 +32,36 @@ button {
   border: none;
 }
 
+
+.keywordContainerSingle {
+  display: flex; /* Flexbox layout for horizontal alignment */
+  align-items: center; /* Vertically aligns items */
+  gap: 8px; /* Optional: Adds space between items */
+}
+
+
+
 button:hover {
   background-color: #666;
+}
+
+.circle-btn {
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  text-align: center;
+  line-height: 0px;
+  /* margin-left: 5px; */
+  cursor: pointer;
+
+  display: flex; /* Enables flexbox layout */
+  align-items: center; /* Vertically centers content */
+  justify-content: center; /* Horizontally centers content */
+
+
+}
+.circle-btn span {
+  display: block;
 }
 
 .container {
@@ -106,9 +139,75 @@ td img {
   font-size: 12px;
   cursor: pointer;
 }
-.keyword-capsule:hover {
+.keyword-capsule-edit{
+  display: inline-block;
+  background-color: rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  padding: 5px 10px;
+  margin-right: 5px;
+  margin-bottom: 5px;
+  font-size: 12px;
+  cursor: pointer;
+  position: relative;
+}
+.keyword-capsule-edit span {
+  margin-right: 20px;
+  font-size: 20px;
+  /* font-weight: bold; */
+}
+
+.blue-hover:hover {
   background-color: var(--blue);
 }
+
+.remove-keyword-btn{
+  position: absolute;
+  top: 0px;
+  right: 0px;
+  color: white;
+  border: none;
+  border-radius: 100%;
+
+  padding: 5px;
+  cursor: pointer;
+  /* margin-left: 10px; */
+
+  width: 20px;
+  height: 20px;
+  text-align: center;
+  line-height: 10px;  
+  margin: 5px;
+
+  /* font-weight: bold; */
+
+}
+
+#new-keyword{
+  margin-top: 10px;
+  width: 80%;
+}
+
+
+#close-keywords-btn{
+  margin: 5px;
+  width: 35px;
+}
+
+.remove-keyword-btn:hover{
+  background-color: red;
+
+}
+
+.save-unsaved-changes{
+  background-color: rgb(13, 177, 48);
+}
+.save-unsaved-changes:hover{
+  background-color: rgb(19, 133, 44);
+}
+
+
+
+
 
 .pathDisplay {
   display: inline-block;
@@ -132,14 +231,21 @@ td img {
   left: 50%;
   transform: translate(-50%, -50%);
   background-color: #333;
-  padding: 20px;
+  padding: 20px 50px;
   border-radius: 10px;
   z-index: 1000;
+  min-width: 50%;
 }
 
 .edit-keywords-modal input {
   margin-right: 10px;
 }
+
+.edit-keywords-modal h3{
+  margin-left: 40%;
+}
+
+
 
 #editKeywordsWindow {
   display: none;

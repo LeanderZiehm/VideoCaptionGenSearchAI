@@ -1,3 +1,6 @@
+const FLIP_THROUGH_INTERVAL = 270;
+
+
 function createVideoRow(video) {
   const row = document.createElement("tr");
   row.classList.add("video-row");
@@ -19,6 +22,8 @@ function createVideoRow(video) {
         <td><input type="checkbox" class="edit-keywords-checkbox"></td>
   `;
 
+  // console.log(row.innerHTML)
+
   setupRowEventListeners(row, video, video.path, thumbnails);
 
   return row;
@@ -37,6 +42,10 @@ function generatePathHTML(video) {
         highlighted = "highlighted";
         const regex = new RegExp(keywordInSearch, "gi");
 
+        // path = path.replace("")
+
+
+
         path = path.replace(regex, (match) => {
           return `<span style="color:white">${match}</span>`;
         });
@@ -45,10 +54,28 @@ function generatePathHTML(video) {
       }
     }
   }
-
-  const pathHTML = `<div class="pathDisplay ${highlighted}">${path}</div>`;
+//id= ${path}
+  const pathHTML = `<div class="pathDisplay ${highlighted}">${shortenPath(path)}</div>`;
   return pathHTML;
 }
+
+
+function convertToGermanDateString(isoString) {
+  // Parse the ISO string to a Date object
+  const date = new Date(isoString);
+
+  // Extract date and time components
+  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, '0'); // Months are 0-indexed
+  const year = date.getFullYear();
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  const seconds = String(date.getSeconds()).padStart(2, '0');
+
+  // Format to German date and time style
+  return `${day}.${month}.${year} ${hours}:${minutes}:${seconds}`;
+}
+
 
 function generateMetadataHtml(metadata) {
   if (!metadata) {
@@ -60,8 +87,10 @@ function generateMetadataHtml(metadata) {
       <td>Unknown FPS</td>
     `;
   } else {
+
+    dateStringGerman = convertToGermanDateString(metadata.media_time_created);
     return `
-      <td>${new Date(metadata.media_time_created).toLocaleString()}</td>
+      <td>${dateStringGerman}</td>
       <td>${metadata.video_length.toFixed(2)}</td>
       <td>${(metadata.file_size / (1024 * 1024)).toFixed(2)}</td>
       <td>${metadata.ratio}</td>
@@ -85,6 +114,7 @@ function getThumbnailPathRelative(thumbnailPath) {
 }
 
 function setupRowEventListeners(row, video, filePath, thumbnails) {
+  // console.log(`row: ${row}, video: ${video}, filePath: ${filePath}, thumbnails: ${thumbnails}`);
   setupPathDisplayListener(row, filePath);
   setupKeywordsContainerListener(row);
   setupThumbnailHover(row, thumbnails);

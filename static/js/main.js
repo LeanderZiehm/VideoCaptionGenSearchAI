@@ -1,7 +1,7 @@
 let MAX_VIDEOS_PER_PAGE = 100;
-const FLIP_THROUGH_INTERVAL = 270;
+
 const videoResults = document.getElementById("video-results");
-const tableHeaders = document.querySelectorAll("th[data-sort]");
+
 
 let keywordsToSearchList = [];
 let isResizing = false;
@@ -13,9 +13,77 @@ let sortSettings = { sortBy: null, isAscending: true };
 sortSettings.sortBy = "date";
 sortSettings.isAscending = false;
 
+
+
+  //if video has attribute remove === true, remove it from the list
+  videoKeywords.videos = videoKeywords.videos.filter((video) => !video.remove);
+
+  //getall video paths that have no metadata and no thumbnails
+
+  const videosrip = videoKeywords.videos.filter(  (video) => video.metadata == null || video.thumbnails == null || video.thumbnails.length === 0);
+
+  // console.log("Videos without metadata", videosrip);
+  // const videosWithoutThumbnails = videoKeywords.videos.filter( (video) =>);
+
+  // const justTheRipPaths = videosrip.map((video) => video.path);
+  // console.log("Rip paths", justTheRipPaths);
+
+
+
+videoKeywords.videos.forEach((video) => {
+
+  // check how many videos have metadata == null
+  // if (video.metadata == null) {
+  //   console.log("Video without metadata", video);
+  // }
+  // //check how many videos have no thumbnais
+  // if (video.thumbnails == null || video.thumbnails.length === 0) {
+  //   console.log("Video without thumbnails", video);
+  // }
+
+  //add ocr text to keywords
+  video.keywords = video.keywords.map((keyword) => {
+    return keyword.toLowerCase();
+  });
+  //add quotes to ocr 
+  video.ocr = video.ocr.map((keyword) => {
+    return `"${keyword}"`;
+  });
+
+
+
+  // video.keywords = video.keywords.concat(video.ocr);
+
+  //lowercase all keywords
+
+
+  //remove duplicates
+  video.keywords = [...new Set(video.keywords)];
+
+  //sort keywords
+  video.keywords.sort();
+  
+
+});
+
+function addOCRtoKeywords() {
+  videoKeywords.videos.forEach((video) => {
+    video.keywords = video.keywords.concat(video.ocr);
+    video.keywords = [...new Set(video.keywords)];
+  });
+}
+
+function removeOCRfromKeywords() {
+  videoKeywords.videos.forEach((video) => {
+    video.keywords = video.keywords.filter((keyword) => !video.ocr.includes(keyword));
+  });
+}
+
+
 function main() {
 
   setup_headerInputs();
+  setup_editKeywordsWindow();
   setup();
   updateVideosDisplayed();
   getKeywordChangesFromServer();
@@ -26,24 +94,12 @@ function setup() {
     const element = document.getElementById("loadMore");
     if (isVisible(element)) {
       loadMore();
-      console.log("Visible, load more");
+      // console.log("Visible, load more");
       loadingMore = true;
     }
   });
 }
 
-function getKeywordChangesFromServer() {
-  fetch("/getKeywordChanges")
-    .then((response) => response.json())
-    .then((changesToApply) => {
-      console.log("Keyword changes", changesToApply);
-
-      for (const change of changesToApply) {
-        applyChange(change);
-      }
-      updateVideosDisplayed();
-    });
-}
 
 
 function getRootPath(path) {
@@ -172,7 +228,7 @@ function sortVideos(videosToSort) {
 }
 
 function displayVideos(videos) {
-  console.log("Displaying videos", videos);
+  // console.log("Displaying videos", videos);
   currentlyDisplayingVideos = videos;
   const displayingText = `Displaying ${currentlyDisplayingVideos.length} out of ${globalFilteredVideos.length} videos`;
   pageVideoCount.innerHTML = displayingText;
@@ -197,11 +253,11 @@ function displayVideos(videos) {
 
 function loadMore() {
   if (indexVideoPage * MAX_VIDEOS_PER_PAGE >= globalFilteredVideos.length) {
-    console.log("No more videos to display.");
+    // console.log("No more videos to display.");
     return;
   }
 
-  console.log("Next page");
+  // console.log("Next page");
   indexVideoPage++;
 
   updateVideosDisplayed();
@@ -221,6 +277,23 @@ function displayNoResultsMessage() {
 function showPath(path) {
   alert(path);
 }
+
+function shortenPath(path) {
+  path = path.replace(
+    "V:\\zentrale-einrichtungen\\Kommunikation u. Marketing\\Marketing\\Videos\\",
+    ""
+  );
+
+  if (isAppleMac()) {
+    path = path.replace("V:", "/Volumes/verteiler");
+    path = path.replace(/\\/g, "/");
+  }
+
+  // console.log(path);
+
+  return path;
+}
+
 
 function getPathForOs(path, removeFileName = false, removeDrivePath = false) {
   if (removeFileName) {
@@ -258,12 +331,15 @@ function addToKeywordsToSearch(keyword) {
   keywordsToSearchList.push(keyword);
 
   let div = document.createElement("div");
+  // keywordContainerSingle class
+  div.className = "keywordContainerSingle";
   let span = document.createElement("span");
   span.innerHTML = keyword;
   div.appendChild(span);
 
   let button = document.createElement("button");
-  button.innerHTML = "x";
+  button.innerHTML = "<span>x</span>";
+  button.className = "circle-btn"; 
   button.onclick = function () {
     this.parentElement.remove();
     removeFromKeywordsToSearch(keyword);

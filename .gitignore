@@ -10,3 +10,6 @@ error_log.txt
 /_old
 templates/indexListView copy.html
 /static/processedOLD
+static/js/x.json
+usageLoggs.txt
+templates/editKeywords copy.html

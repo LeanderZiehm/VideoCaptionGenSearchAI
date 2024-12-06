@@ -36,8 +36,8 @@ document.addEventListener("keydown", function (event) {
     }
   } else if (event.key === "Escape") {
     if (editWindowIsOpen()) {
-      hideEditWindow();
-      saveKeywordChanges();
+      requestCloseEditWindow();
+
       return;
     }
 

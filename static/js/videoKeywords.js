@@ -1,3 +1,4 @@
+
 function generateKeywordsHtml(keywords) {
   return keywords
     .map((keyword) => {
@@ -12,10 +13,12 @@ function generateKeywordsHtml(keywords) {
         );
         highlight = "highlighted";
       }
-      return `<span class="keyword-capsule ${highlight}">${keyword}</span>`;
+      return `<span class="keyword-capsule blue-hover ${highlight}">${keyword}</span>`;
     })
     .join("");
 }
+
+
 
 function keywordIsInVideoPath(video, keyword) {
   return video.path.toLowerCase().includes(keyword.toLowerCase());

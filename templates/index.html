@@ -5,9 +5,19 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Video Keyword Search</title>
-  <script src="{{ url_for('static', filename='videoKeywordsOLD_Processed.js') }}"></script>
+  <script src="{{ url_for('static', filename='videoKeywords.js') }}"></script>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}" />
 </head>
+
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-WRPTN745X9"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-WRPTN745X9');
+</script>
 
 <body>
   <div id="editKeywordsWindow">
@@ -43,6 +53,9 @@
 
     <label for="match-in-path">Match in Path</label>
     <input type="checkbox" id="match-in-path" name="match-in-path" value="match-in-path" />
+
+    <label for="show-ocr-keywords">Show OCR Keywords</label>
+    <input type="checkbox" id="show-ocr-keywords" name="show-ocr-keywords" value="show-ocr-keywords" />
 
     <div id="keywordsToSearch"></div>
 

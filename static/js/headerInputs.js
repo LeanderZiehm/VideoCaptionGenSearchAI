@@ -8,13 +8,47 @@ const pathFilter = document.getElementById("path-filter");
 const uniqueFps = new Set();
 const uniqueRatios = new Set();
 
+const strictSearch = document.getElementById("strict-search");
+const matchInPath = document.getElementById("match-in-path"); 
+
+const tableHeadersSortable = document.querySelectorAll("th[data-sort]");
+const tableHeaders = document.querySelectorAll("th");
+// const            document.getElementById("edit-selected-videos-keywords-btn")
+const editSelectedVideosKeywordsBtn = document.getElementById("edit-selected-videos-keywords-btn");
+
+//ocr
+const showOcrKeywordsCheckbox = document.getElementById("show-ocr-keywords");
+
+let minDate;
+let maxDate;
+
+
+
+function dateToInputString(date) {
+  return date.toISOString().split("T")[0];
+}
+
 
 
 function setup_headerInputs() {
-  minDateInput.value = "2007-01-01";
-  maxDateInput.value = new Date().toISOString().split("T")[0];
-  minDateInput.addEventListener("change", updateVideosDisplayed);
-  maxDateInput.addEventListener("change", updateVideosDisplayed);
+
+  // minDateInput.value = "2007-01-01";
+  // maxDateInput.value = dateToInputString(new Date());
+  minDateInput.addEventListener("change", function () {
+    // console.log(minDateInput.value);
+    if(minDateInput.value == "") {
+      minDateInput.value = dateToInputString(minDate);
+    }
+    updateVideosDisplayed();
+  });
+
+  maxDateInput.addEventListener("change", function () {
+    // console.log(maxDateInput.value);
+    if(maxDateInput.value == "") {
+      maxDateInput.value = dateToInputString(maxDate);
+    }
+    updateVideosDisplayed();
+  });
   const rootPaths = new Set();
   const videos = videoKeywords.videos;
   for (let i = 0; i < videos.length; i++) {
@@ -56,9 +90,8 @@ function setup_headerInputs() {
     updateVideosDisplayed();
   });
 
-  document
-    .getElementById("edit-selected-videos-keywords-btn")
-    .addEventListener("click", () => {
+  
+  editSelectedVideosKeywordsBtn.addEventListener("click", () => {
       const selectedRows = document.querySelectorAll(".selected-video-row");
       const selectedVideos = [];
 
@@ -76,14 +109,26 @@ function setup_headerInputs() {
       updateOpenEditKeywordsModal();
     });
 
-  document
-    .getElementById("strict-search")
-    .addEventListener("change", updateVideosDisplayed);
-  document
-    .getElementById("match-in-path")
-    .addEventListener("change", updateVideosDisplayed);
+ strictSearch.addEventListener("change", updateVideosDisplayed);
 
-  tableHeaders.forEach((header) => {
+ //checkbox
+ showOcrKeywordsCheckbox.addEventListener("change", (e) => {
+    if (showOcrKeywordsCheckbox.checked) {
+      addOCRtoKeywords();
+    } else {
+      removeOCRfromKeywords();
+    }
+    updateVideosDisplayed();
+
+});
+
+
+ 
+  //activate checkbox
+  matchInPath.checked = true;
+  matchInPath.addEventListener("change", updateVideosDisplayed);
+
+  tableHeadersSortable.forEach((header) => {
     header.addEventListener("click", () => {
       const sortHeader = header.getAttribute("data-sort");
       sortSettings.sortBy = sortHeader;
@@ -93,7 +138,12 @@ function setup_headerInputs() {
     });
   });
 
-  document.querySelectorAll("th").forEach((th) => {
+  // show-ocr-keywords
+
+
+
+
+  tableHeaders.forEach((th) => {
     const handle = th.querySelector(".resize-handle");
     handle.addEventListener("mousedown", (e) => {
       isResizing = true;
@@ -120,7 +170,7 @@ function setup_headerInputs() {
 function fillFPSAndRatioAndMinMaxDateDropdownFilters() {
   const videos = videoKeywords.videos;
 
-  const maxDate = new Date(
+  maxDate = new Date(
     Math.max.apply(
       null,
       videos.map((video) =>
@@ -132,7 +182,7 @@ function fillFPSAndRatioAndMinMaxDateDropdownFilters() {
   );
   maxDate.setDate(maxDate.getDate() + 1);
 
-  const minDate = new Date(
+  minDate = new Date(
     Math.min.apply(
       null,
       videos.map((video) =>
@@ -142,8 +192,8 @@ function fillFPSAndRatioAndMinMaxDateDropdownFilters() {
       )
     )
   );
-  minDateInput.value = minDate.toISOString().split("T")[0];
-  maxDateInput.value = maxDate.toISOString().split("T")[0];
+  minDateInput.value = dateToInputString(minDate)
+  maxDateInput.value = dateToInputString(maxDate)
 
   for (let i = 0; i < videos.length; i++) {
     const video = videos[i];
