@@ -13,8 +13,7 @@ const matchInPath = document.getElementById("match-in-path");
 
 const tableHeadersSortable = document.querySelectorAll("th[data-sort]");
 const tableHeaders = document.querySelectorAll("th");
-// const            document.getElementById("edit-selected-videos-keywords-btn")
-const editSelectedVideosKeywordsBtn = document.getElementById("edit-selected-videos-keywords-btn");
+const editSelectedVideosKeywordsBtn = document.getElementById("edit-th");
 
 //ocr
 const showOcrKeywordsCheckbox = document.getElementById("show-ocr-keywords");
@@ -91,23 +90,7 @@ function setup_headerInputs() {
   });
 
   
-  editSelectedVideosKeywordsBtn.addEventListener("click", () => {
-      const selectedRows = document.querySelectorAll(".selected-video-row");
-      const selectedVideos = [];
-
-      selectedRows.forEach((row) => {
-        const path = row.id;
-        const video = videoKeywords.videos.find((video) => video.path === path);
-        selectedVideos.push(video);
-      });
-
-      if (selectedVideos.length == 0) {
-        alert("No videos selected");
-        return;
-      }
-      setVideosToEdit(selectedVideos);
-      updateOpenEditKeywordsModal();
-    });
+  editSelectedVideosKeywordsBtn.addEventListener("click", editSelectedVideosKeywords);
 
  strictSearch.addEventListener("change", updateVideosDisplayed);
 
@@ -121,6 +104,7 @@ function setup_headerInputs() {
     updateVideosDisplayed();
 
 });
+
 
 
  
@@ -165,6 +149,25 @@ function setup_headerInputs() {
     isResizing = false;
     currentTh = null;
   });
+}
+
+function editSelectedVideosKeywords() {
+
+  const selectedRows = document.querySelectorAll(".selected-video-row");
+  const selectedVideos = [];
+
+  selectedRows.forEach((row) => {
+    const path = row.id;
+    const video = videoKeywords.videos.find((video) => video.path === path);
+    selectedVideos.push(video);
+  });
+
+  if (selectedVideos.length == 0) {
+    alert("No videos selected");
+    return;
+  }
+  setVideosToEdit(selectedVideos);
+  updateOpenEditKeywordsModal();
 }
 
 function fillFPSAndRatioAndMinMaxDateDropdownFilters() {

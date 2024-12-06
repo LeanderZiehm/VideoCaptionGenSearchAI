@@ -8,7 +8,7 @@ body {
   background-color: rgba(0, 0, 0, 0.85);
   color: white;
 
-  padding: 40px;
+  /* padding: 40px; */
 }
 
 
@@ -89,7 +89,7 @@ table {
 th,
 td {
   padding: 10px;
-  text-align: left;
+  text-align: center;
   border-bottom: 1px solid rgba(255, 255, 255, 0.2);
 }
 
@@ -101,6 +101,31 @@ th {
 th:hover {
   background-color: rgba(255, 255, 255, 0.1);
 }
+
+/* #edit-th { */
+  /* background-color: rgb(0, 153, 255); */
+  /* border: none; */
+/* } */
+
+.breathingHighlight {
+  background-color: rgb(0, 153, 255);
+  border: none;
+  animation: breathe 2s ease-in-out infinite;
+  z-index: 1;
+}
+
+
+
+
+@keyframes breathe {
+  0%, 100% {
+    transform: scale(1); /* Start at normal size */
+  }
+  50% {
+    transform: scale(1.1); /* Grow to 110% of original size */
+  }
+}
+/* rgb(0, 153, 255); */
 
 th[data-sort],
 th[data-sort="date"],
@@ -115,7 +140,7 @@ th[data-sort="date"]:hover,
 th[data-sort="length"]:hover,
 th[data-sort="size"]:hover,
 th[data-sort="ratio"]:hover,
-th[data-sort="fps"]:hover {
+th[data-sort="fps"]:hover,#edit-th:hover {
   background-color: var(--blue);
   color: var(--white);
 }
@@ -300,7 +325,8 @@ th {
   color: rgba(0, 0, 0, 0.6);
 }
 .keywordsContainer {
-  min-width: 700px;
+  /* width: 30vw; */
+  
 }
 
 #loadMore {
@@ -318,6 +344,40 @@ th {
 #loadMore span {
   text-align: center; /* Ensures the text within the span is centered */
 }
-#edit-selected-videos-keywords-btn {
+/* #edit-selected-videos-keywords-btn {
   float: right;
+  margin-right: 26%;
+  margin-bottom: 20px;
+} */
+
+/* stack them on top of each other in 1 column */
+.voteContainer{
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
+
+.upvote, .downvote{
+  margin: 10px;
+  width: 24px;
+  height: 24px;
+  cursor: pointer;
+  fill: white;
+}
+
+
+.upvote:hover{
+  fill: rgb(0, 255, 149);
+}
+
+
+.downvote:hover{
+  fill: rgb(255, 0, 0);
+}
+.voteNumber{
+  user-select: none;
+}
+
+/* .clicks{
+
+} */

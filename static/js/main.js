@@ -101,7 +101,6 @@ function setup() {
 }
 
 
-
 function getRootPath(path) {
   const relativePath = path.replace(
     "V:\\zentrale-einrichtungen\\Kommunikation u. Marketing\\Marketing\\Videos\\",
@@ -156,13 +155,7 @@ function filterVideos(videos, shouldStopEarly = true) {
     const matchesFps = fpsValue === "" || videoFPS == fpsValue;
     const matchesRatio = ratioValue === "" || videoRatio == ratioValue;
     const matchesPath =
-      pathValue === "" ||
-      video.path
-        .replace(
-          "V:\\zentrale-einrichtungen\\Kommunikation u. Marketing\\Marketing\\Videos\\",
-          ""
-        )
-        .split("\\")[0] == pathValue;
+      pathValue === "" || getRootPath(video.path) == pathValue;
 
     const searchingForUnknowns =
       fpsValue === "unknown" || ratioValue === "unknown";
@@ -278,42 +271,8 @@ function showPath(path) {
   alert(path);
 }
 
-function shortenPath(path) {
-  path = path.replace(
-    "V:\\zentrale-einrichtungen\\Kommunikation u. Marketing\\Marketing\\Videos\\",
-    ""
-  );
-
-  if (isAppleMac()) {
-    path = path.replace("V:", "/Volumes/verteiler");
-    path = path.replace(/\\/g, "/");
-  }
-
-  // console.log(path);
-
-  return path;
-}
 
 
-function getPathForOs(path, removeFileName = false, removeDrivePath = false) {
-  if (removeFileName) {
-    path = path.substring(0, path.lastIndexOf("\\"));
-  }
-
-  if (removeDrivePath) {
-    path = path.replace(
-      "V:\\zentrale-einrichtungen\\Kommunikation u. Marketing\\Marketing\\Videos\\",
-      ""
-    );
-  }
-
-  if (isAppleMac()) {
-    path = path.replace("V:", "/Volumes/verteiler");
-    path = path.replace(/\\/g, "/");
-  }
-
-  return path;
-}
 
 function isAppleMac() {
   if (navigator.userAgent.toLowerCase().includes("mac")) {
@@ -404,18 +363,18 @@ function updateVideosDisplayed() {
   let allVideos = getAllVideos();
   sortedVideos = sortVideos(allVideos);
 
-  const startTime = performance.now();
+  // const startTime = performance.now();
   globalFilteredVideos = filterVideos(sortedVideos, false);
-  const endTime = performance.now();
+  // const endTime = performance.now();
 
   const filteredVideosSmall = globalFilteredVideos.slice(
     0,
     (indexVideoPage + 1) * MAX_VIDEOS_PER_PAGE
   );
 
-  const startTimeDisplay = performance.now();
+  // const startTimeDisplay = performance.now();
   displayVideos(filteredVideosSmall);
-  const endTimeDisplay = performance.now();
+  // const endTimeDisplay = performance.now();
 }
 
 let loadingMore = false;

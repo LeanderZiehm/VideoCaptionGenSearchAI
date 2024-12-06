@@ -7,6 +7,11 @@ from datetime import datetime
 app = Flask(__name__)
 videoKeywordChangesPath = 'static/videoKeywordChanges.json'
 infoLoggs = {}
+
+
+loadedVideoKeywordChanges = []
+
+
 # lock = threading.Lock()
 
 
@@ -39,18 +44,9 @@ infoLoggs = {}
 
 @app.route('/')
 def list_view():
-    #save the ip and the time of the request
     ip = request.remote_addr
     time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    #time how long the request took
-    # startTime = datetime.now()
-    # print()
-    # addIPSave(ip, time)
-    # requestSave()
-    # endTime = datetime.now()
-    # print(f"Time to log the request: {endTime - startTime}")
-    
-    with open('usageLoggs.txt', 'a') as file:
+    with open('clicksLoggs.txt', 'a') as file:
         file.write(f"{time} - {ip}\n")
     
     return render_template('index.html')
@@ -71,30 +67,26 @@ def saveSearchInfo():
     print(jsSearch)
     pass
 
+
+def loadKeywordChanges():
+    global loadedVideoKeywordChanges
+    if loadedVideoKeywordChanges == []:    
+        if os.path.exists(videoKeywordChangesPath):
+            with open(videoKeywordChangesPath, 'r') as file:
+                loadedVideoKeywordChanges = json.load(file)
+    return loadedVideoKeywordChanges
+
+
 @app.route('/saveKeywordChanges', methods=['POST'])
 def saveKeywordChanges():
-    
     jsChange = request.json #      const currentKeywordChanges = { path: "", add: [], remove: [] };
     print(jsChange)
-    
-    
-    #if 
-    if os.path.exists(videoKeywordChangesPath):
-        with open(videoKeywordChangesPath, 'r') as file:
-            videoKeywordChanges = json.load(file)
-            
-    else:
-        videoKeywordChanges = []
-        
+    videoKeywordChanges = loadKeywordChanges()
     paths = jsChange['paths'];
     add = jsChange['add'];
     remove = jsChange['remove'];
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     ip = request.remote_addr
-    
-    
-    # [{"paths":["V:\\zentrale-einrichtungen\\Kommunikation u. Marketing\\Marketing\\Videos\\DAAD Preis\\2024\\Export\\DAAD_24_final.mp4"], "add": ["gg"], "remove": [" flowers"]}]
-    
     newChanges = {"paths": paths, "add": add, "remove": remove, "timestamp": timestamp, "who": ip}
     videoKeywordChanges.append(newChanges)
 
@@ -103,40 +95,70 @@ def saveKeywordChanges():
         
     return jsonify({"status": "success"})
 
+
+
+
 @app.route('/getKeywordChanges', methods=['GET'])
-def getKeywordChanges():
-    
-    if os.path.exists(videoKeywordChangesPath):
-        with open(videoKeywordChangesPath, 'r') as file:
-            videoKeywordChanges = json.load(file)
-    else:
-        videoKeywordChanges = {}
-        
+def getKeywordChangesRequest():
+    videoKeywordChanges = loadKeywordChanges()
     return jsonify(videoKeywordChanges)
 
-# updateKeywordChanges
 
-@app.route('/updateKeywordChanges', methods=['POST'])
-def updateKeywordChanges():
+
+loadedClicksAndVotes = {}
+
+# function generateClicksAndVotesHTML(path) {
+#   const videoClicks = data["videoClicks"];
+#   const videoVotes = data["videoVotes"];
+  
+#   const clicks = videoClicks[path];
+#   const Votes = videoVotes[path];
+
+#   return `
+#     <td>${clicks}</td>
+#     <td>${Votes}</td>
+#   `;
+# }
+
+pathClicksAndVotes = 'static/clicksAndVotes.json'
+
+def loadClicksAndVotes():
+    global loadedClicksAndVotes
+    if loadedClicksAndVotes == {}:
+        if os.path.exists(pathClicksAndVotes):
+            with open(pathClicksAndVotes, 'r') as file:
+                loadedClicksAndVotes = json.load(file)
+    return loadedClicksAndVotes
     
-    jsChange = request.json
-    print(jsChange)
-    index = 0
-    newNameForFile = videoKeywordChangesPath
-    while True:
-    
-        if os.path.exists(newNameForFile):
-            index += 1
-            #new name 
-            split = videoKeywordChangesPath.split('.')
-            newNameForFile = f"{split[0]}_{index}.{split[1]}"
-        else:
-            break
+
+
+@app.route('/getClicksAndVotes', methods=['GET'])
+def getClicksAndVotes():
+    clicksAndVotes = loadClicksAndVotes()
+    return jsonify(clicksAndVotes)
+
+@app.route('/saveClicksAndVotes', methods=['POST'])
+def saveClicksAndVotes():
+    jsData = request.json
+    print(jsData)
         
-    # //create new file 
-    with open(newNameForFile, 'w') as file:
-        json.dump(jsChange, file, indent=4)
-            
+    path = jsData['path']
+    clicks = jsData['clicks']
+    votes = jsData['votes']
+    
+    clicksAndVotes = loadClicksAndVotes()
+    clicksAndVotes[path] = {"clicks": clicks, "votes": votes}
+    
+    print("save",clicksAndVotes)
+    
+    with open(pathClicksAndVotes, 'w') as file:
+        json.dump(clicksAndVotes, file, indent=4)
+        
+    return jsonify({"status": "success"})
+
+
+
+
 
 
 if __name__ == '__main__':

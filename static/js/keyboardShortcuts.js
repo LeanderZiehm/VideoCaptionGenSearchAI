@@ -49,7 +49,8 @@ document.addEventListener("keydown", function (event) {
   } else if (ctrl && event.key === "e") {
     event.preventDefault();
     console.log("Edit button pressed");
-    document.getElementById("edit-selected-videos-keywords-btn").click();
+    // document.getElementById("edit-selected-videos-keywords-btn").click();
+    editSelectedVideosKeywords();
   } else if (ctrl && event.key === "ArrowUp") {
     window.scrollTo({ top: 0, behavior: "auto" });
   } else if (ctrl && event.key === "ArrowDown") {

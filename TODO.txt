@@ -2,3 +2,10 @@ if I do ctrl+A select all?
 think about how to copy the absolute path or without the file name just dir  picture or path  and alt for directory select dropdown
 
 fix double keyword add visual
+
+
+
+
+
+
+####

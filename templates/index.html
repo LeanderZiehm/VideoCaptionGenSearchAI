@@ -7,17 +7,8 @@
   <title>Video Keyword Search</title>
   <script src="{{ url_for('static', filename='videoKeywords.js') }}"></script>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}" />
+  <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
 </head>
-
-<!-- Google tag (gtag.js) -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-WRPTN745X9"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-
-  gtag('config', 'G-WRPTN745X9');
-</script>
 
 <body>
   <div id="editKeywordsWindow">
@@ -61,7 +52,7 @@
 
     <label id="pageVideoCount">pageVideoConunt NOT ASSIGNED</label>
 
-    <button id="edit-selected-videos-keywords-btn">Edit Selected</button>
+    <!-- <button id="edit-selected-videos-keywords-btn">Edit Selected</button> -->
 
     <table>
       <thead>
@@ -72,6 +63,11 @@
           </th>
           <th style="width: 600px">
             Keywords
+            <div class="resize-handle"></div>
+          </th>
+
+          <th id="edit-th">
+            Edit
             <div class="resize-handle"></div>
           </th>
 
@@ -95,10 +91,18 @@
             FPS
             <div class="resize-handle"></div>
           </th>
-          <th>
-            Edit
+
+          <th data-sort="clicks">
+            Clicks
             <div class="resize-handle"></div>
           </th>
+
+
+          <th data-sort="vote">
+            Votes
+            <div class="resize-handle"></div>
+          </th>
+
         </tr>
       </thead>
       <tbody id="video-results"></tbody>
@@ -107,6 +111,7 @@
 
   <div id="loadMore">Displaying X out of Y videos</div>
 
+  <script src="{{ url_for('static', filename='js/dataManager.js') }}"></script>
   <script src="{{ url_for('static', filename='js/videoRow.js') }}"></script>
   <script src="{{ url_for('static', filename='js/headerInputs.js') }}"></script>
   <script src="{{ url_for('static', filename='js/videoKeywords.js') }}"></script>
