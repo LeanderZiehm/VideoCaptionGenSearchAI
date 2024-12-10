@@ -10,10 +10,6 @@ import ollama
 import re
 import logging
 import numpy as np
-# import pytesseract
-import easyocr
-
-reader = easyocr.Reader(["de","en"])
 
 # modelName = "minicpm-v"
 # modelName = "llama3.2-vision"
@@ -101,14 +97,9 @@ def main():
                 processedVideoCount += 1
 
     print(f"skippedVideoCount: {skippedVideoCount}")
-    # loadedJsonData['uniqueMetadata'] = calculateUniqueMetadata(loadedJsonData['videos'])
-    # print(loadedJsonData['uniqueMetadata'])
-    # print(loadedJsonData)
-    # saveToJsFile(loadedJsonData)
-    # print('Unique Metadata: ', loadedJsonData['uniqueMetadata'])
     
     tagAllRemovedVideos(loadedJsonData,ALL_FILES_PATHS)
-    
+    removeAllChangedPaths(loadedJsonData,ALL_FILES_PATHS)
 
     print(f"Processed {processedVideoCount} videos.")
     print(f"Erorrs: {errors}")
@@ -117,22 +108,13 @@ def main():
 
     print(f"Total Time: {time.time() - initTime}")
 
-# def calculateUniqueMetadata(videos):
-#     uniqueMetadata = {}
-#     metadataKeys = ["ratio", "fps", "video_length", "file_size"]
-#     for video in videos:
-#         metadata = video["metadata"]
-#         if metadata is not None:
-#             for key in metadataKeys:
-#                 if key not in uniqueMetadata:
-#                     uniqueMetadata[key] = []
-#                     print("new key added", key)
-#                 if metadata[key] not in uniqueMetadata[key]:
-#                     uniqueMetadata[key].append(metadata[key])
-                
-#                 print(f"Unique Metadata: {key} - {metadata[key]}")
-    
-#     return uniqueMetadata
+def removeAllChangedPaths(loadedJsonData,ALL_FILES_PATHS):
+    removedVideos = []
+    for video in loadedJsonData['videos']:
+        if video['path'] not in ALL_FILES_PATHS:
+            removedVideos.append(video)
+            del video
+            
 
 
 
@@ -147,14 +129,6 @@ def tagAllRemovedVideos(loadedJsonData,ALL_FILES_PATHS):
             
     print(f"Tagged {count} removed videos")
     saveToJsFile(loadedJsonData)
-    # print("Tagged all removed videos")
-    
-
-
-def extract_text(image_path):
-    result = reader.readtext(image_path, detail=0)
-    # print(result)
-    return result
 
 
 
@@ -162,24 +136,16 @@ def processVideo(video_path):
     scene_frames_paths = extract_equally_spaced_frames(video_path, MAX_SCENE_COUNT)
     print(f"Scene Frames: {scene_frames_paths}")
     keywords = set()
-    ocrs = set()
+
     for frame_path in scene_frames_paths:
         print(f"###{frame_path}###")
         generatedKeywords = generate_keywords(frame_path)
-        # print(f"Generated Keywords: {generatedKeywords}")
-
-        # ocr = f'"{extract_text(frame_path)}"'
-        # keywords.update(ocr)
         keywords.update(generatedKeywords)
 
-        ocrs.update(extract_text(frame_path))
-
-    # print("...")
     metadata = getMetadata(video_path)
     processedVideoData = {
         "path": video_path,
         "keywords": list(keywords),
-        "ocr": list(ocrs),
         "thumbnails": scene_frames_paths,
         "metadata": metadata,
     }
@@ -200,8 +166,6 @@ def generate_keywords(image_path):
         return ["defaultKeyword"]
 
     keywords = []
-    
-    # "Write 3 keywords describing this image. Only add keywords you are very confident about matching the image. Return comma seperated keywords in the same line.",
     
     prompt =  "Write 9 keywords describing this image. Return comma seperated keywords in the same line."
     keywordsText = run_ollama(prompt, image_path)
@@ -298,7 +262,7 @@ def loadJsonData():
 
     if "videos" not in jsonData:
         jsonData["videos"] = []
-
+        
     return jsonData
 
 

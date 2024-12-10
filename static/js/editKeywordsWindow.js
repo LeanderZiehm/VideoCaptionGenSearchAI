@@ -111,7 +111,6 @@ function updateOpenEditKeywordsModal() {
       )
       .join("");
   }
-  // console.log("Selected videos", selectedVideos);
   const sameKeywords = [];
   let keywordMatches = false;
   const video = selectedVideos[0];
@@ -193,12 +192,17 @@ function updateOpenEditKeywordsModal() {
     btn.addEventListener("click", (e) => {
       const target = e.target;
 
-      console.log("Target", target);
+      // console.log("Target", target);
+      // console.log("Parent", target.parentElement);
 
-      const keywordClicked = target.parentElement.querySelector("span").innerText;
+      const keywordClicked = target.parentElement.querySelector("span").innerText.trim();
 
-      const keywordToRemove = video.keywords.find((keyword) => keyword === keywordClicked);
-      console.log("Keyword to remove", keywordToRemove);
+      // console.log("Keyword clicked", keywordClicked);
+// 
+      // console.log("video.keywords",video.keywords)
+
+      const keywordToRemove = video.keywords.find((keyword) => keyword.trim() === keywordClicked);
+      // console.log("Keyword to remove", keywordToRemove);
 
       currentKeywordChanges.remove.push(keywordToRemove);
       updateOpenEditKeywordsModal();

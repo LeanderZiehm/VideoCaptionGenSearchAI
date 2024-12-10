@@ -10,6 +10,7 @@ let indexVideoPage = 0;
 const THUMBNAIL_INDEX = 1;
 let sortSettings = { sortBy: null, isAscending: true };
 
+
 videoKeywords.videos = videoKeywords.videos.filter((video) => !video.remove);
 
 const videosrip = videoKeywords.videos.filter(
@@ -24,29 +25,15 @@ videoKeywords.videos.forEach((video) => {
     return keyword.toLowerCase();
   });
   //add quotes to ocr
-  video.ocr = video.ocr.map((keyword) => {
-    return `"${keyword}"`;
-  });
+  // video.ocr = video.ocr.map((keyword) => {
+  //   return `"${keyword}"`;
+  // });
 
   video.keywords = [...new Set(video.keywords)];
 
   video.keywords.sort();
 });
 
-function addOCRtoKeywords() {
-  videoKeywords.videos.forEach((video) => {
-    video.keywords = video.keywords.concat(video.ocr);
-    video.keywords = [...new Set(video.keywords)];
-  });
-}
-
-function removeOCRfromKeywords() {
-  videoKeywords.videos.forEach((video) => {
-    video.keywords = video.keywords.filter(
-      (keyword) => !video.ocr.includes(keyword)
-    );
-  });
-}
 
 function main() {
   setup_headerInputs();

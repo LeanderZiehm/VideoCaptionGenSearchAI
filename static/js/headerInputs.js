@@ -20,7 +20,7 @@ let activeSortingHeader;
 const editSelectedVideosKeywordsBtn = document.getElementById("edit-th");
 
 //ocr
-const showOcrKeywordsCheckbox = document.getElementById("show-ocr-keywords");
+// const showOcrKeywordsCheckbox = document.getElementById("show-ocr-keywords");
 
 let minDate;
 let maxDate;
@@ -101,15 +101,15 @@ function setup_headerInputs() {
  strictSearch.addEventListener("change", updateVideosDisplayed);
 
  //checkbox
- showOcrKeywordsCheckbox.addEventListener("change", (e) => {
-    if (showOcrKeywordsCheckbox.checked) {
-      addOCRtoKeywords();
-    } else {
-      removeOCRfromKeywords();
-    }
-    updateVideosDisplayed();
+//  showOcrKeywordsCheckbox.addEventListener("change", (e) => {
+//     if (showOcrKeywordsCheckbox.checked) {
+//       addOCRtoKeywords();
+//     } else {
+//       removeOCRfromKeywords();
+//     }
+//     updateVideosDisplayed();
 
-});
+// });
 
 
 
