@@ -13,6 +13,10 @@ const matchInPath = document.getElementById("match-in-path");
 
 const tableHeadersSortable = document.querySelectorAll("th[data-sort]");
 const tableHeaders = document.querySelectorAll("th");
+
+let activeSortingHeader;
+
+
 const editSelectedVideosKeywordsBtn = document.getElementById("edit-th");
 
 //ocr
@@ -20,6 +24,8 @@ const showOcrKeywordsCheckbox = document.getElementById("show-ocr-keywords");
 
 let minDate;
 let maxDate;
+
+
 
 
 
@@ -115,13 +121,47 @@ function setup_headerInputs() {
   tableHeadersSortable.forEach((header) => {
     header.addEventListener("click", () => {
       const sortHeader = header.getAttribute("data-sort");
+
+      if(sortHeader == sortSettings.sortBy) {
+        sortSettings.isAscending = !sortSettings.isAscending;
+      } else {
+        sortSettings.isAscending = false;
+      }
+
       sortSettings.sortBy = sortHeader;
-      sortSettings.isAscending = !sortSettings.isAscending;
+
+
+  
+
+
+
+      if (activeSortingHeader) {
+        activeSortingHeader.id = "";
+        activeSortingHeader.classList.remove("ascending");
+        activeSortingHeader.classList.remove("descending");
+      }
+      activeSortingHeader = header;
+      activeSortingHeader.id = "activeSortingHeader";
+
+      if (sortSettings.isAscending) {
+        
+        activeSortingHeader.classList.add("ascending");
+        activeSortingHeader.classList.remove("descending");
+      } else {
+        activeSortingHeader.classList.add("descending");
+        activeSortingHeader.classList.remove("ascending");
+      }
+      
+
 
       updateVideosDisplayed();
     });
   });
 
+  // data-sort="date"
+  const dateHeader = document.querySelector('th[data-sort="date"]');
+  //click 
+  dateHeader.click();
   // show-ocr-keywords
 
 
@@ -227,5 +267,3 @@ function fillFPSAndRatioAndMinMaxDateDropdownFilters() {
     .map((ratio) => `<option value="${ratio}">${ratio}</option>`)
     .join("")}<option value="unknown">unknown</option>`;
 }
-
-// document.addEventListener("DOMContentLoaded", setup_headerInputs);

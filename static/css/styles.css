@@ -1,6 +1,7 @@
 :root {
   --blue: rgb(41, 121, 255);
   --white: #ffffff;
+  --orange: rgb(255, 165, 0);
 }
 
 body {
@@ -132,18 +133,25 @@ th[data-sort="date"],
 th[data-sort="length"],
 th[data-sort="size"],
 th[data-sort="ratio"],
-th[data-sort="fps"] {
+th[data-sort="fps"],
+th[data-sort="clicks"],
+th[data-sort="votes"]  {
   cursor: pointer;
+  background-color: rgba(255, 255, 255, 0.2);
 }
 
 th[data-sort="date"]:hover,
 th[data-sort="length"]:hover,
 th[data-sort="size"]:hover,
 th[data-sort="ratio"]:hover,
-th[data-sort="fps"]:hover,#edit-th:hover {
+th[data-sort="fps"]:hover,
+th[data-sort="clicks"]:hover,
+th[data-sort="votes"]:hover,
+#edit-th:hover {
   background-color: var(--blue);
   color: var(--white);
 }
+
 
 td img {
   width: 100%;
@@ -326,7 +334,21 @@ th {
 }
 .keywordsContainer {
   /* width: 30vw; */
-  
+}
+
+#activeSortingHeader {
+  background-color: rgba(255, 255, 255, 0.349);
+  border: 1px solid rgba(255, 255, 255, 1);
+}
+
+.ascending::after {
+  content: "\A ▲"; /* Use \A for a line break */
+  white-space: pre; /* Enable line breaks in content */
+}
+
+.descending::after {
+  content: "\A ▼";
+  white-space: pre;
 }
 
 #loadMore {

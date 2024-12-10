@@ -38,7 +38,6 @@ function setup_editKeywordsWindow() {
 
   
 document.getElementById("save-keywords-btn").addEventListener("click", () => {
-  // hideEditWindow();
   submitKeyword();
   saveKeywordChanges();
 });
@@ -93,6 +92,7 @@ function  requestCloseEditWindow() {
 function closeEditWindow() {
   hideEditWindow();
   clearCurrentKeywordChanges();
+  console.log("Closing edit window");
 }
 
 
@@ -100,7 +100,6 @@ function closeEditWindow() {
 
 function updateOpenEditKeywordsModal() {
 
-  //currentKeywordChanges.add.
   selectedVideos = getVideosToEdit();
 
   function getKeywordsToCapsule(keywords) {
@@ -122,6 +121,7 @@ function updateOpenEditKeywordsModal() {
   //add and remove keywords currentKeywordChanges
 
   const toAdd = currentKeywordChanges.add;
+  console.log("toAdd", toAdd);
   const toRemove = currentKeywordChanges.remove;
 
 
@@ -182,12 +182,8 @@ function updateOpenEditKeywordsModal() {
 
 
   if(hasChangesUnsaved()) {
-    //add class to save button
     document.getElementById("save-keywords-btn").classList.add("save-unsaved-changes");
   }else {
-    //remove class from save button
-    // document.getElementById("save-keywords-btn").classList.remove("save-unsaved-changes");
-    //remove all classes from save button
     document.getElementById("save-keywords-btn").className = "";
   }
   
@@ -201,22 +197,10 @@ function updateOpenEditKeywordsModal() {
 
       const keywordClicked = target.parentElement.querySelector("span").innerText;
 
-      // const index = e.target.getAttribute("data-index");
-      // console.log(video.keywords.length);
-
-      // console.log("Index", index);
-
       const keywordToRemove = video.keywords.find((keyword) => keyword === keywordClicked);
       console.log("Keyword to remove", keywordToRemove);
 
-      // console.log(" e.target",  e.target);
-      // const removedKeyword = video.keywords.splice(index, 1)[0];
-      // const justGetKeyword 
-
-      // console.log(video.keywords.length);
       currentKeywordChanges.remove.push(keywordToRemove);
-      // console.log("Removed keyword", removedKeyword);
-      // updateVideosDisplayed();
       updateOpenEditKeywordsModal();
     });
   });
@@ -239,26 +223,19 @@ function submitKeyword() {
   }
 }
 
-function addKeywordToVideosEdited(keyword) {
-  const videosToEdit = getVideosToEdit();
-  videosToEdit.forEach((video) => {
-    video.keywords.push(keyword);
-  });
-}
-
-
 function saveKeywordChanges() {
   const addedOrRemovedSomething =
     currentKeywordChanges.add.length > 0 ||
     currentKeywordChanges.remove.length > 0;
+
 
   if (!addedOrRemovedSomething) {
     console.log("No changes to save");
     return;
   }
 
-  // console.log("Saving keyword changes", currentKeywordChanges);
-  applyChange(currentKeywordChanges);
+  // console.log(" applyChange(currentKeywordChanges);", currentKeywordChanges);
+  // applyChange(currentKeywordChanges);
   fetch("/saveKeywordChanges", {
     method: "POST",
     headers: {
@@ -268,7 +245,6 @@ function saveKeywordChanges() {
   })
     .then((response) => response.json())
     .then((data) => {
-      console.log("Success:", currentKeywordChanges);
       clearCurrentKeywordChanges();
       updateVideosDisplayed();
     })
@@ -292,12 +268,20 @@ function getVideosToEdit() {
 
 
 function applyChange(change) {
+
+  console.log("applyChange(change) ", change);
   for (const path of change.paths) {
     const video = videoKeywords.videos.find((video) => video.path === path);
 
     if (video) {
+
+      console.log("video.keywords", video.keywords);
+
+
       const changes = change;
+      console.log(" changes.add",  changes.add);
       changes.add.forEach((keyword) => {
+        console.log("keyword", keyword);
         video.keywords.push(keyword);
       });
 
@@ -307,6 +291,8 @@ function applyChange(change) {
           video.keywords.splice(index, 1);
         }
       });
+
+      console.log("video.keywords", video.keywords);
     }
   }
 }
@@ -314,10 +300,9 @@ function getKeywordChangesFromServer() {
   fetch("/getKeywordChanges")
     .then((response) => response.json())
     .then((changesToApply) => {
-      // console.log("Keyword changes", changesToApply);
-
       console.log("Changes to apply", changesToApply);
       for (const change of changesToApply) {
+        console.log("For change in changesToApply", change);
         applyChange(change);
       }
       updateVideosDisplayed();

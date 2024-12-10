@@ -314,14 +314,25 @@ function toggleSelectRowCheckbox(row, toogle = false) {
 
   if (checkbox.checked) {
     row.classList.add("selected-video-row");
-    document.getElementById("edit-th").classList.add("breathingHighlight")
+    checkIfBreathingHighlight();
+    // document.getElementById("edit-th").classList.add("breathingHighlight")
   } else {
     row.classList.remove("selected-video-row");
     //all selected rows
-    const selectedRows = document.querySelectorAll(".selected-video-row");
-    if (selectedRows.length == 0) {
-      document.getElementById("edit-th").classList.remove("breathingHighlight")
-    }
+    // const selectedRows = document.querySelectorAll(".selected-video-row");
+    // if (selectedRows.length == 0) {
+    //   document.getElementById("edit-th").classList.remove("breathingHighlight")
+    // }
+    checkIfBreathingHighlight();
     
+  }
+}
+
+function checkIfBreathingHighlight() {
+  const selectedRows = document.querySelectorAll(".selected-video-row");
+  if (selectedRows.length > 0) {
+    document.getElementById("edit-th").classList.add("breathingHighlight")
+  } else {
+    document.getElementById("edit-th").classList.remove("breathingHighlight")
   }
 }

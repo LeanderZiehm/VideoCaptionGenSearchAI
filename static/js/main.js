@@ -2,7 +2,6 @@ let MAX_VIDEOS_PER_PAGE = 100;
 
 const videoResults = document.getElementById("video-results");
 
-
 let keywordsToSearchList = [];
 let isResizing = false;
 let lastDownX = 0;
@@ -10,60 +9,28 @@ let currentTh;
 let indexVideoPage = 0;
 const THUMBNAIL_INDEX = 1;
 let sortSettings = { sortBy: null, isAscending: true };
-sortSettings.sortBy = "date";
-sortSettings.isAscending = false;
 
+videoKeywords.videos = videoKeywords.videos.filter((video) => !video.remove);
 
-
-  //if video has attribute remove === true, remove it from the list
-  videoKeywords.videos = videoKeywords.videos.filter((video) => !video.remove);
-
-  //getall video paths that have no metadata and no thumbnails
-
-  const videosrip = videoKeywords.videos.filter(  (video) => video.metadata == null || video.thumbnails == null || video.thumbnails.length === 0);
-
-  // console.log("Videos without metadata", videosrip);
-  // const videosWithoutThumbnails = videoKeywords.videos.filter( (video) =>);
-
-  // const justTheRipPaths = videosrip.map((video) => video.path);
-  // console.log("Rip paths", justTheRipPaths);
-
-
+const videosrip = videoKeywords.videos.filter(
+  (video) =>
+    video.metadata == null ||
+    video.thumbnails == null ||
+    video.thumbnails.length === 0
+);
 
 videoKeywords.videos.forEach((video) => {
-
-  // check how many videos have metadata == null
-  // if (video.metadata == null) {
-  //   console.log("Video without metadata", video);
-  // }
-  // //check how many videos have no thumbnais
-  // if (video.thumbnails == null || video.thumbnails.length === 0) {
-  //   console.log("Video without thumbnails", video);
-  // }
-
-  //add ocr text to keywords
   video.keywords = video.keywords.map((keyword) => {
     return keyword.toLowerCase();
   });
-  //add quotes to ocr 
+  //add quotes to ocr
   video.ocr = video.ocr.map((keyword) => {
     return `"${keyword}"`;
   });
 
-
-
-  // video.keywords = video.keywords.concat(video.ocr);
-
-  //lowercase all keywords
-
-
-  //remove duplicates
   video.keywords = [...new Set(video.keywords)];
 
-  //sort keywords
   video.keywords.sort();
-  
-
 });
 
 function addOCRtoKeywords() {
@@ -75,19 +42,18 @@ function addOCRtoKeywords() {
 
 function removeOCRfromKeywords() {
   videoKeywords.videos.forEach((video) => {
-    video.keywords = video.keywords.filter((keyword) => !video.ocr.includes(keyword));
+    video.keywords = video.keywords.filter(
+      (keyword) => !video.ocr.includes(keyword)
+    );
   });
 }
 
-
 function main() {
-
   setup_headerInputs();
   setup_editKeywordsWindow();
   setup();
   updateVideosDisplayed();
   getKeywordChangesFromServer();
-
 }
 function setup() {
   window.addEventListener("scroll", function (event) {
@@ -100,7 +66,6 @@ function setup() {
   });
 }
 
-
 function getRootPath(path) {
   const relativePath = path.replace(
     "V:\\zentrale-einrichtungen\\Kommunikation u. Marketing\\Marketing\\Videos\\",
@@ -110,8 +75,6 @@ function getRootPath(path) {
 
   return rootPath;
 }
-
-
 
 function filterVideos(videos, shouldStopEarly = true) {
   const fpsValue = fpsFilter.value;
@@ -210,10 +173,25 @@ function sortVideos(videosToSort) {
     } else if (sortKey === "fps") {
       return (a.metadata.fps - b.metadata.fps) * (isAscending ? 1 : -1);
     } else if (sortKey === "ratio") {
-      return (
-        a.metadata.ratio.localeCompare(b.metadata.ratio) *
-        (isAscending ? 1 : -1)
-      );
+      const ratioA = a.metadata.ratio;
+      const ratioB = b.metadata.ratio;
+
+      const numbersOfRatioA = ratioA.split(":");
+      const numbersOfRatioB = ratioB.split(":");
+
+      const sumNumbersOfRatioA = numbersOfRatioA[0] + numbersOfRatioA[1];
+      const sumNumbersOfRatioB = numbersOfRatioB[0] + numbersOfRatioB[1];
+
+      return (sumNumbersOfRatioA - sumNumbersOfRatioB) * (isAscending ? 1 : -1);
+      // clicks
+    } else if (sortKey === "clicks") {
+      const clicksA = getClicks(a.path);
+      const clicksB = getClicks(b.path);
+      return (clicksA - clicksB) * (isAscending ? 1 : -1);
+    } else if (sortKey === "votes") {
+      const votesA = getVotes(a.path);
+      const votesB = getVotes(b.path);
+      return (votesA - votesB) * (isAscending ? 1 : -1);
     }
   });
 
@@ -271,9 +249,6 @@ function showPath(path) {
   alert(path);
 }
 
-
-
-
 function isAppleMac() {
   if (navigator.userAgent.toLowerCase().includes("mac")) {
     return true;
@@ -298,7 +273,7 @@ function addToKeywordsToSearch(keyword) {
 
   let button = document.createElement("button");
   button.innerHTML = "<span>x</span>";
-  button.className = "circle-btn"; 
+  button.className = "circle-btn";
   button.onclick = function () {
     this.parentElement.remove();
     removeFromKeywordsToSearch(keyword);
@@ -375,11 +350,12 @@ function updateVideosDisplayed() {
   // const startTimeDisplay = performance.now();
   displayVideos(filteredVideosSmall);
   // const endTimeDisplay = performance.now();
+
+  // document.getElementById("edit-th").classList.remove("breathingHighlight")
+  checkIfBreathingHighlight();
 }
 
 let loadingMore = false;
-
-
 
 function requestToLoadMore() {
   if (!loadingMore) {
@@ -395,4 +371,3 @@ function isVisible(ele) {
 }
 
 main();
- 
