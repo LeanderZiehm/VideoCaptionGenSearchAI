@@ -888,5 +888,16 @@
         "remove": [],
         "timestamp": "2024-12-05 10:56:07",
         "who": "127.0.0.1"
+    },
+    {
+        "paths": [
+            "V:\\zentrale-einrichtungen\\Kommunikation u. Marketing\\Marketing\\Videos\\StudiengangTestimonials2024\\AI+Medieninformatik\\Video\\Stud-MedienInformatik-v3.mp4"
+        ],
+        "add": [],
+        "remove": [
+            " young woman"
+        ],
+        "timestamp": "2024-12-10 13:51:13",
+        "who": "127.0.0.1"
     }
 ]

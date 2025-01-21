@@ -275,7 +275,7 @@ function applyChange(change) {
 
   console.log("applyChange(change) ", change);
   for (const path of change.paths) {
-    const video = videoKeywords.videos.find((video) => video.path === path);
+    const video = getAllVideos().find((video) => video.path === path);
 
     if (video) {
 

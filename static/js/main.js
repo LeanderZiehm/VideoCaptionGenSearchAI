@@ -11,23 +11,22 @@ const THUMBNAIL_INDEX = 1;
 let sortSettings = { sortBy: null, isAscending: true };
 
 
-videoKeywords.videos = videoKeywords.videos.filter((video) => !video.remove);
+allVideosArray = allVideosArray.filter((video) =>   video.thumbnails.length > 0 );
 
-const videosrip = videoKeywords.videos.filter(
+const videosrip = allVideosArray.filter(
   (video) =>
     video.metadata == null ||
     video.thumbnails == null ||
     video.thumbnails.length === 0
 );
 
-videoKeywords.videos.forEach((video) => {
+allVideosArray.forEach((video) => {
+
+
+
   video.keywords = video.keywords.map((keyword) => {
     return keyword.toLowerCase();
   });
-  //add quotes to ocr
-  // video.ocr = video.ocr.map((keyword) => {
-  //   return `"${keyword}"`;
-  // });
 
   video.keywords = [...new Set(video.keywords)];
 
@@ -222,7 +221,7 @@ function loadMore() {
 }
 
 function getAllVideos() {
-  return videoKeywords.videos;
+  return allVideosArray;
 }
 
 function displayNoResultsMessage() {

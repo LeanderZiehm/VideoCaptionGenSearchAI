@@ -74,7 +74,7 @@ def main():
                 
                 ALL_FILES_PATHS.append(filepath)
 
-                if filepath in [video["path"] for video in loadedJsonData["videos"]]:
+                if filepath in [video["path"] for video in loadedJsonData]:
                     skippedVideoCount += 1
                     continue
 
@@ -82,11 +82,11 @@ def main():
 
                 try:
                     processedVideoData = processVideo(filepath)
-                    loadedJsonData["videos"].append(processedVideoData)
+                    loadedJsonData.append(processedVideoData)
                     saveToJsFile(loadedJsonData)
 
                     save_info_log(
-                        f"Saved js: {len(loadedJsonData['videos'])} | {filepath}"
+                        f"Saved js: {len(loadedJsonData)} | {filepath}"
                     )
 
                 except Exception as e:
@@ -98,7 +98,7 @@ def main():
 
     print(f"skippedVideoCount: {skippedVideoCount}")
     
-    tagAllRemovedVideos(loadedJsonData,ALL_FILES_PATHS)
+
     removeAllChangedPaths(loadedJsonData,ALL_FILES_PATHS)
 
     print(f"Processed {processedVideoCount} videos.")
@@ -108,27 +108,31 @@ def main():
 
     print(f"Total Time: {time.time() - initTime}")
 
-def removeAllChangedPaths(loadedJsonData,ALL_FILES_PATHS):
+def removeAllChangedPaths(loadedJsonData, ALL_FILES_PATHS):
     removedVideos = []
-    for video in loadedJsonData['videos']:
+
+    # Collect videos to be removed
+    for video in loadedJsonData:
         if video['path'] not in ALL_FILES_PATHS:
             removedVideos.append(video)
-            del video
-            
 
+    # Remove collected videos from the original list
+    for video in removedVideos:
+        loadedJsonData.remove(video)
+        
+        
+    
+    if len(removedVideos) > 0:
+        with open("static/removedVideos.json", 'a') as file:
+            jsonToSave = json.dumps(removedVideos, indent=4)
+            file.write("\n"+jsonToSave)
 
-
-def tagAllRemovedVideos(loadedJsonData,ALL_FILES_PATHS):
-    count = 0
-    for video in loadedJsonData['videos']:
-        if video['path'] not in ALL_FILES_PATHS:
-            video['removed'] = True
-            count += 1
-            print(video['path'])
-            
-            
-    print(f"Tagged {count} removed videos")
     saveToJsFile(loadedJsonData)
+    
+    print(f"######## Removed {len(removedVideos)} videos###: {removedVideos}")
+
+
+
 
 
 
@@ -153,9 +157,11 @@ def processVideo(video_path):
     return processedVideoData
 
 
+jsPrefix = "var allVideosArray = "
+
 def saveToJsFile(jsonData):
     jsonData = json.dumps(jsonData, indent=4)
-    jsData = f"var videoKeywords = {jsonData};"
+    jsData = f"{jsPrefix}{jsonData}"
     with open(VIDEO_KEYWORDS_FILE, "w") as jsFile:
         jsFile.write(jsData)
 
@@ -256,12 +262,11 @@ def loadJsonData():
     else:
         with open(VIDEO_KEYWORDS_FILE, "r") as jsFile:
             text = jsFile.read()
-            jsonText = text[text.find("{") :]
-            jsonText = jsonText[: jsonText.rfind("}") + 1]
-            jsonData = json.loads(jsonText)
+            #remove jsPrefix
+            text = text.replace(jsPrefix, "")
+            
+            jsonData = json.loads(text)
 
-    if "videos" not in jsonData:
-        jsonData["videos"] = []
         
     return jsonData
 

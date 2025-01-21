@@ -11,9 +11,7 @@
 </head>
 
 <body>
-  <div id="editKeywordsWindow">
 
-  </div>
 
   <div class="container">
     <div id="filters">
@@ -25,17 +23,31 @@
       <select id="ratio-filter">
         <option value="">All</option>
       </select>
-      <label for="minDate">Min Date:</label>
-      <input type="date" id="minDate" class="date-input" />
+  <div>
+    <label for="minDate">Min Date:</label>
+    <input type="date" id="minDate" class="date-input" />
+  </div>
 
-      <label for="maxDate">Max Date:</label>
-      <input type="date" id="maxDate" class="date-input" />
+      <div>
+        <label for="maxDate">Max Date:</label>
+        <input type="date" id="maxDate" class="date-input" />
+  
+      </div>
 
-      <label for="path-filter">Path:</label>
-      <select id="path-filter">
-        <option value="">All</option>
-      </select>
+      <div>
+        <label for="path-filter">Path:</label>
+        <select id="path-filter">
+          <option value="">All</option>
+        </select>
+      </div>
+
+
+      <a id="editHistory" href="/editHistory"><img src="{{ url_for('static', filename='editHistory.png') }}" alt="Edit History" /> </a>
+
     </div>
+
+    
+
 
     <input type="text" id="search-bar" placeholder="Search for captions..." />
 
@@ -110,6 +122,8 @@
   </div>
 
   <div id="loadMore">Displaying X out of Y videos</div>
+
+  <div id="editKeywordsWindow"></div>
 
   <script src="{{ url_for('static', filename='js/dataManager.js') }}"></script>
   <script src="{{ url_for('static', filename='js/videoRow.js') }}"></script>

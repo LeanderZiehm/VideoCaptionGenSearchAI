@@ -19,6 +19,10 @@ let activeSortingHeader;
 
 const editSelectedVideosKeywordsBtn = document.getElementById("edit-th");
 
+const editHistory = document.getElementById("editHistory"); // a
+
+
+
 //ocr
 // const showOcrKeywordsCheckbox = document.getElementById("show-ocr-keywords");
 
@@ -55,7 +59,7 @@ function setup_headerInputs() {
     updateVideosDisplayed();
   });
   const rootPaths = new Set();
-  const videos = videoKeywords.videos;
+  const videos = getAllVideos();
   for (let i = 0; i < videos.length; i++) {
     const video = videos[i];
     const rootPath = getRootPath(video.path);
@@ -198,7 +202,7 @@ function editSelectedVideosKeywords() {
 
   selectedRows.forEach((row) => {
     const path = row.id;
-    const video = videoKeywords.videos.find((video) => video.path === path);
+    const video = getAllVideos().find((video) => video.path === path);
     selectedVideos.push(video);
   });
 
@@ -211,7 +215,7 @@ function editSelectedVideosKeywords() {
 }
 
 function fillFPSAndRatioAndMinMaxDateDropdownFilters() {
-  const videos = videoKeywords.videos;
+  const videos = getAllVideos();
 
   maxDate = new Date(
     Math.max.apply(

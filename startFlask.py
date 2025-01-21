@@ -12,36 +12,6 @@ infoLoggs = {}
 loadedVideoKeywordChanges = []
 
 
-# lock = threading.Lock()
-
-
-# def loadInfoLoggs():
-#     global infoLoggs
-#     if os.path.exists('static/infoLoggs.json'):
-#         with open('static/infoLoggs.json', 'r') as file:
-#             infoLoggs = json.load(file)
-            
-# def saveInfoLoggs():
-#     global infoLoggs
-#     with open('static/infoLoggs.json', 'w') as file:
-#         json.dump(infoLoggs, file, indent=4)
-        
-# def addIPSave(ip, time):
-#     global infoLoggs
-#     if (ip in infoLoggs) == False:
-#         infoLoggs[ip] = []
-#     infoLoggs[ip].append({time})
-    
-# def async_save_info_loggs():
-#     with lock:
-#         saveInfoLoggs()
-
-# def requestSave():
-    # threading.Thread(target=async_save_info_loggs).start()
-
-
-# loadInfoLoggs()
-
 @app.route('/')
 def list_view():
     ip = request.remote_addr
@@ -51,9 +21,9 @@ def list_view():
     
     return render_template('index.html')
 
-@app.route('/edit')
+@app.route('/editHistory')
 def edit_view():
-    return render_template('editKeywords.html')
+    return render_template('editHistory.html')
 
 @app.route("/getIP", methods=["GET"])
 def getIP():
