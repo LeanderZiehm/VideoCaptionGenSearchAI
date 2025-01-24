@@ -5,7 +5,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Video Keyword Search</title>
-  <script src="{{ url_for('static', filename='videoKeywords.js') }}"></script>
+  <script src="{{ url_for('static', filename='videoKeywordsData.js') }}"></script>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}" />
   <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
 </head>
@@ -42,7 +42,7 @@
       </div>
 
 
-      <a id="editHistory" href="/editHistory"><img src="{{ url_for('static', filename='editHistory.png') }}" alt="Edit History" /> </a>
+      <!-- <a id="editHistory" href="/editHistory"><img src="{{ url_for('static', filename='editHistory.png') }}" alt="Edit History" /> </a> -->
 
     </div>
 
@@ -57,8 +57,6 @@
     <label for="match-in-path">Match in Path</label>
     <input type="checkbox" id="match-in-path" name="match-in-path" value="match-in-path" />
 
-    <!-- <label for="show-ocr-keywords">Show OCR Keywords</label>
-    <input type="checkbox" id="show-ocr-keywords" name="show-ocr-keywords" value="show-ocr-keywords" /> -->
 
     <div id="keywordsToSearch"></div>
 

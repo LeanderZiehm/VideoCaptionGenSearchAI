@@ -8,42 +8,27 @@ from moviepy.editor import VideoFileClip
 from datetime import datetime
 import ollama
 import re
-import logging
 import numpy as np
 
 # modelName = "minicpm-v"
 # modelName = "llama3.2-vision"
 modelName = "llava"
 
-
-
 tookLoadTime = time.time() - initTime
 print(f"init import Time: {tookLoadTime}")
-
-
-logging.basicConfig(
-    filename="error_log.txt",
-    level=logging.ERROR,
-    format="%(asctime)s - %(levelname)s - %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S",
-)
 
 OVERRIED_EXISTING = False #False
 skip_AI = False
 MAX_VIDEO_COUNT = -1
 MAX_SCENE_COUNT = 5
 
-
 VIDEO_FOLDER = r"V:\zentrale-einrichtungen\Kommunikation u. Marketing\Marketing\Videos"
-
 STATIC_PATH = "static/"
-VIDEO_KEYWORDS_FILE = "static/videoKeywords.js"
+VIDEO_KEYWORDS_FILE = "static/videoKeywordsData.js"
 PROCESSED_PATH = "static/processed/"
 
-
-
-
-
+video_formats = [".mp4", ".avi", ".mkv", ".mov", ".wmv", ".flv"]
+image_formats = [".jpg", ".jpeg", ".png", ".bmp"]
 
 def main():
     loadedJsonData = loadJsonData()
@@ -55,10 +40,11 @@ def main():
     stopEarly = False
 
     for subdir, _, files in os.walk(VIDEO_FOLDER):
-        print(f"Folder: {subdir}")
-
+       
         if stopEarly:
             break
+
+        print(f"Folder: {subdir}")
         
         for file in files:
             
@@ -90,7 +76,7 @@ def main():
                     )
 
                 except Exception as e:
-                    logging.error(f"An error occurred: {str(e)} | {filepath}")
+                    # logging.error(f"An error occurred: {str(e)} | {filepath}")
 
                     errors.append((str(e), filepath))
 
@@ -111,17 +97,14 @@ def main():
 def removeAllChangedPaths(loadedJsonData, ALL_FILES_PATHS):
     removedVideos = []
 
-    # Collect videos to be removed
+
     for video in loadedJsonData:
         if video['path'] not in ALL_FILES_PATHS:
             removedVideos.append(video)
 
-    # Remove collected videos from the original list
     for video in removedVideos:
         loadedJsonData.remove(video)
         
-        
-    
     if len(removedVideos) > 0:
         with open("static/removedVideos.json", 'a') as file:
             jsonToSave = json.dumps(removedVideos, indent=4)
@@ -130,11 +113,6 @@ def removeAllChangedPaths(loadedJsonData, ALL_FILES_PATHS):
     saveToJsFile(loadedJsonData)
     
     print(f"######## Removed {len(removedVideos)} videos###: {removedVideos}")
-
-
-
-
-
 
 def processVideo(video_path):
     scene_frames_paths = extract_equally_spaced_frames(video_path, MAX_SCENE_COUNT)
@@ -193,18 +171,11 @@ def run_ollama(prompt, imagePath):
 
     return result
 
-
-
 def extract_equally_spaced_frames(video_path, num_frames):
     """Extracts equally spaced frames from a video and returns a list of frame paths."""
-
-    # video_name = os.path.splitext(os.path.basename(video_path))[0]
-    # video_name = re.sub(r"[^\x00-\x7F]+", "", video_name)
-    # video_path = re.sub(r"[^\x00-\x7F]+", "", video_path)
     shortened_video_path = video_path.replace(VIDEO_FOLDER, '', 1)
     short_cleaned_video_path = re.sub(r'[^A-Za-z0-9_]', '', shortened_video_path)
 
-    # output_dir = PROCESSED_PATH + video_name
     output_dir = PROCESSED_PATH + short_cleaned_video_path
 
     if not os.path.exists(output_dir):
@@ -250,37 +221,27 @@ def time_function(func):
         end_time = time.time()
         print(f"{func.__name__} took {end_time - start_time:.4f} seconds to run")
         return result
-
     return wrapper
 
 
 @time_function
 def loadJsonData():
-
     if OVERRIED_EXISTING or os.path.exists(VIDEO_KEYWORDS_FILE) == False:
         jsonData = {}
     else:
         with open(VIDEO_KEYWORDS_FILE, "r") as jsFile:
             text = jsFile.read()
-            #remove jsPrefix
             text = text.replace(jsPrefix, "")
-            
             jsonData = json.loads(text)
-
-        
     return jsonData
 
-
 def getMetadata(video_path):
-
     try:
         video = VideoFileClip(video_path)
-
         media_time_created = min(
             datetime.fromtimestamp(os.path.getctime(video_path)),
             datetime.fromtimestamp(os.path.getmtime(video_path)),
         ).isoformat()
-
         metadata = {
             "media_time_created": media_time_created,
             "ratio": f"{video.size[0]}:{video.size[1]}",
@@ -288,28 +249,20 @@ def getMetadata(video_path):
             "video_length": video.duration,
             "file_size": os.path.getsize(video_path),
         }
-
         video.close()
     except:
         metadata = None
-
     return metadata
 
 
 def save_info_log(message):
-
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
     log_entry = f"{timestamp} - {message}\n"
-
     print(f"\n #### INFO{log_entry} ####\n")
-
     with open("info_log.txt", "a") as f:
         f.write(log_entry)
 
 
-video_formats = [".mp4", ".avi", ".mkv", ".mov", ".wmv", ".flv"]
-image_formats = [".jpg", ".jpeg", ".png", ".bmp"]
 
 
 if __name__ == "__main__":

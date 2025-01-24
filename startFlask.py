@@ -2,41 +2,21 @@ from flask import Flask, render_template, jsonify, request
 import json
 import os
 from datetime import datetime
-# import threading
+
 
 app = Flask(__name__)
 videoKeywordChangesPath = 'static/videoKeywordChanges.json'
 infoLoggs = {}
 
-
 loadedVideoKeywordChanges = []
+
+loadedClicksAndVotes = {}
+pathClicksAndVotes = 'static/clicksAndVotes.json'
 
 
 @app.route('/')
-def list_view():
-    ip = request.remote_addr
-    time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    with open('clicksLoggs.txt', 'a') as file:
-        file.write(f"{time} - {ip}\n")
-    
+def list_view():    
     return render_template('index.html')
-
-@app.route('/editHistory')
-def edit_view():
-    return render_template('editHistory.html')
-
-@app.route("/getIP", methods=["GET"])
-def getIP():
-    return jsonify({'ip': request.remote_addr}), 200
-
-#save search info
-@app.route('/saveSearchInfo', methods=['POST'])
-def saveSearchInfo():
-    
-    jsSearch = request.json
-    print(jsSearch)
-    pass
-
 
 def loadKeywordChanges():
     global loadedVideoKeywordChanges
@@ -49,7 +29,7 @@ def loadKeywordChanges():
 
 @app.route('/saveKeywordChanges', methods=['POST'])
 def saveKeywordChanges():
-    jsChange = request.json #      const currentKeywordChanges = { path: "", add: [], remove: [] };
+    jsChange = request.json
     print(jsChange)
     videoKeywordChanges = loadKeywordChanges()
     paths = jsChange['paths'];
@@ -65,32 +45,11 @@ def saveKeywordChanges():
         
     return jsonify({"status": "success"})
 
-
-
-
 @app.route('/getKeywordChanges', methods=['GET'])
 def getKeywordChangesRequest():
     videoKeywordChanges = loadKeywordChanges()
     return jsonify(videoKeywordChanges)
 
-
-
-loadedClicksAndVotes = {}
-
-# function generateClicksAndVotesHTML(path) {
-#   const videoClicks = data["videoClicks"];
-#   const videoVotes = data["videoVotes"];
-  
-#   const clicks = videoClicks[path];
-#   const Votes = videoVotes[path];
-
-#   return `
-#     <td>${clicks}</td>
-#     <td>${Votes}</td>
-#   `;
-# }
-
-pathClicksAndVotes = 'static/clicksAndVotes.json'
 
 def loadClicksAndVotes():
     global loadedClicksAndVotes
@@ -127,12 +86,6 @@ def saveClicksAndVotes():
     return jsonify({"status": "success"})
 
 
-
-
-
-
 if __name__ == '__main__':
-    # app.run(port=5000,debug=True)
-    # app.run(host="0.0.0.0", port=5000, debug=True,ssl_context='adhoc')
     app.run(host="0.0.0.0", port=5000, debug=True)
 
