@@ -1,16 +1,40 @@
 import setupCheck
 import subprocess
 import os
+import time
+
+
+# the other path to the network drive is in processVideos.py
+VIDEO_FOLDER = r"V:\zentrale-einrichtungen\Kommunikation u. Marketing\Marketing\Videos"
+
+CHECK_FOLDER = r"00-Video-Search-Tool_Leander"
+
+checkNetworkDrivePath = os.path.join(VIDEO_FOLDER, CHECK_FOLDER)
+
+
+def run_flask():
+    """Runs the Flask application in a separate command prompt."""
+    os.system("start cmd /k python startFlask.py")
+
+
+def run_videos_every_2_hours():
+    """Runs the processVideos.py script every 2 hours in the same process."""
+    while True:
+        subprocess.run(["python", "processVideos.py"])
+        print("processVideos.py executed. Waiting for 2 hours...")
+        time.sleep(48 * 60 * 60)  # Sleep for 2 hours (2 * 60 * 60 seconds)
 
 
 def main_program():
     print("Safety checks passed. Running main program...")
-    os.system("start http://127.0.0.1:5000")
-    flask_process = subprocess.Popen(["python", "startFlask.py"])
-    videos_process = subprocess.Popen(["python", "processVideos.py"])
-    flask_process.wait()
-    videos_process.wait()
+
+    # Run the Flask application in a new CMD
+    run_flask()
+
+    # Start the processVideos loop in the same process
+    run_videos_every_2_hours()
+
 
 if __name__ == "__main__":
-    setupCheck.main()
+    setupCheck.main(checkNetworkDrivePath)
     main_program()

@@ -1,14 +1,14 @@
+import numpy as np
+import re
+import ollama
+from datetime import datetime
+from moviepy.editor import VideoFileClip
+import cv2
+import json
+import os
 import time
 
 initTime = time.time()
-import os
-import json
-import cv2
-from moviepy.editor import VideoFileClip
-from datetime import datetime
-import ollama
-import re
-import numpy as np
 
 # modelName = "minicpm-v"
 # modelName = "llama3.2-vision"
@@ -17,37 +17,41 @@ modelName = "llava"
 tookLoadTime = time.time() - initTime
 print(f"init import Time: {tookLoadTime}")
 
-OVERRIED_EXISTING = False #False
+OVERRIED_EXISTING = False  # False
 skip_AI = False
 MAX_VIDEO_COUNT = -1
 MAX_SCENE_COUNT = 5
 
-VIDEO_FOLDER = r"V:\zentrale-einrichtungen\Kommunikation u. Marketing\Marketing\Videos"
+
+VIDEO_FOLDER = r"V:\zentrale-einrichtungen\Kommunikation u. Marketing\Marketing\Video\25jahre"
+
 STATIC_PATH = "static/"
-VIDEO_KEYWORDS_FILE = "static/videoKeywordsData.js"
+VIDEO_KEYWORDS_FILE = "static/videoKeywordsDatabase.js"
 PROCESSED_PATH = "static/processed/"
 
 video_formats = [".mp4", ".avi", ".mkv", ".mov", ".wmv", ".flv"]
 image_formats = [".jpg", ".jpeg", ".png", ".bmp"]
 
+
 def main():
+    ONLY_CHECK_FILEPATH = False
     loadedJsonData = loadJsonData()
     processedVideoCount = 0
     skippedVideoCount = 0
     errors = []
     ALL_FILES_PATHS = []
-    
+
     stopEarly = False
 
     for subdir, _, files in os.walk(VIDEO_FOLDER):
-       
+
         if stopEarly:
             break
 
         print(f"Folder: {subdir}")
-        
+
         for file in files:
-            
+
             if (processedVideoCount >= MAX_VIDEO_COUNT) and (MAX_VIDEO_COUNT != -1):
                 print(
                     f"[{MAX_VIDEO_COUNT} processed. Stopping because it's the MAX_VIDEO_COUNT.]"
@@ -57,12 +61,45 @@ def main():
 
             if any(file.lower().endswith(ext) for ext in video_formats):
                 filepath = os.path.join(subdir, file)
-                
+
                 ALL_FILES_PATHS.append(filepath)
 
-                if filepath in [video["path"] for video in loadedJsonData]:
+                filePathWasAlreaySaved = False
+
+                for video in loadedJsonData:
+
+                    if video["path"] == filepath:
+                        filePathWasAlreaySaved = True
+
+                        if ONLY_CHECK_FILEPATH:
+                            break
+
+                        if "thumbnails" in video and isinstance(video["thumbnails"], list):
+                            # Filter out thumbnails that actually exist on disk
+                            existing_thumbnails = [
+                                thumb for thumb in video["thumbnails"] if os.path.exists(thumb)]
+                        else:
+                            existing_thumbnails = []
+
+                        # If less than MAX_SCENE_COUNT, regenerate thumbnails
+                        if len(existing_thumbnails) < MAX_SCENE_COUNT:
+                            video["thumbnails"] = extract_equally_spaced_frames(
+                                filepath)
+                        else:
+                            # Keep valid ones
+                            video["thumbnails"] = existing_thumbnails
+                        break
+
+                if filePathWasAlreaySaved:
                     skippedVideoCount += 1
                     continue
+
+                # if filepath in [video["path"] for video in loadedJsonData]:
+
+                    # video["thumbnails"] = extract_equally_spaced_frames(filepath)
+
+                    #
+                    # continue
 
                 print(f"Processing video: {filepath}")
 
@@ -83,9 +120,8 @@ def main():
                 processedVideoCount += 1
 
     print(f"skippedVideoCount: {skippedVideoCount}")
-    
 
-    removeAllChangedPaths(loadedJsonData,ALL_FILES_PATHS)
+    removeAllChangedPaths(loadedJsonData, ALL_FILES_PATHS)
 
     print(f"Processed {processedVideoCount} videos.")
     print(f"Erorrs: {errors}")
@@ -94,9 +130,9 @@ def main():
 
     print(f"Total Time: {time.time() - initTime}")
 
+
 def removeAllChangedPaths(loadedJsonData, ALL_FILES_PATHS):
     removedVideos = []
-
 
     for video in loadedJsonData:
         if video['path'] not in ALL_FILES_PATHS:
@@ -104,18 +140,19 @@ def removeAllChangedPaths(loadedJsonData, ALL_FILES_PATHS):
 
     for video in removedVideos:
         loadedJsonData.remove(video)
-        
+
     if len(removedVideos) > 0:
         with open("static/removedVideos.json", 'a') as file:
             jsonToSave = json.dumps(removedVideos, indent=4)
             file.write("\n"+jsonToSave)
 
     saveToJsFile(loadedJsonData)
-    
+
     print(f"######## Removed {len(removedVideos)} videos###: {removedVideos}")
 
+
 def processVideo(video_path):
-    scene_frames_paths = extract_equally_spaced_frames(video_path, MAX_SCENE_COUNT)
+    scene_frames_paths = extract_equally_spaced_frames(video_path)
     print(f"Scene Frames: {scene_frames_paths}")
     keywords = set()
 
@@ -135,7 +172,11 @@ def processVideo(video_path):
     return processedVideoData
 
 
+def
+
+
 jsPrefix = "var allVideosArray = "
+
 
 def saveToJsFile(jsonData):
     jsonData = json.dumps(jsonData, indent=4)
@@ -150,13 +191,14 @@ def generate_keywords(image_path):
         return ["defaultKeyword"]
 
     keywords = []
-    
-    prompt =  "Write 9 keywords describing this image. Return comma seperated keywords in the same line."
+
+    prompt = "Write 9 keywords describing this image. Return comma seperated keywords in the same line."
     keywordsText = run_ollama(prompt, image_path)
     keywordsText = keywordsText.replace(".", "")
     keywordsText = keywordsText.lower()
     keywords = keywordsText.split(",")
     return keywords
+
 
 def run_ollama(prompt, imagePath):
     result = ""
@@ -171,10 +213,12 @@ def run_ollama(prompt, imagePath):
 
     return result
 
-def extract_equally_spaced_frames(video_path, num_frames):
+
+def extract_equally_spaced_frames(video_path, num_frames=MAX_SCENE_COUNT):
     """Extracts equally spaced frames from a video and returns a list of frame paths."""
     shortened_video_path = video_path.replace(VIDEO_FOLDER, '', 1)
-    short_cleaned_video_path = re.sub(r'[^A-Za-z0-9_]', '', shortened_video_path)
+    short_cleaned_video_path = re.sub(
+        r'[^A-Za-z0-9_]', '', shortened_video_path)
 
     output_dir = PROCESSED_PATH + short_cleaned_video_path
 
@@ -189,7 +233,8 @@ def extract_equally_spaced_frames(video_path, num_frames):
 
     total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
     if total_frames < num_frames:
-        print(f"Video has fewer frames than the requested {num_frames} frames.")
+        print(
+            f"Video has fewer frames than the requested {num_frames} frames.")
         return []
 
     frame_indices = np.linspace(0, total_frames - 1, num_frames, dtype=int)
@@ -206,7 +251,8 @@ def extract_equally_spaced_frames(video_path, num_frames):
             )
             cv2.imwrite(frame_filename, frame)
             frame_paths.append(frame_filename)
-            print(f"Frame {i+1} extracted at {int(timestamp_ms)}ms: {frame_filename}")
+            print(
+                f"Frame {i+1} extracted at {int(timestamp_ms)}ms: {frame_filename}")
         else:
             print(f"Failed to extract frame at index {frame_idx}")
 
@@ -235,6 +281,7 @@ def loadJsonData():
             jsonData = json.loads(text)
     return jsonData
 
+
 def getMetadata(video_path):
     try:
         video = VideoFileClip(video_path)
@@ -261,8 +308,6 @@ def save_info_log(message):
     print(f"\n #### INFO{log_entry} ####\n")
     with open("info_log.txt", "a") as f:
         f.write(log_entry)
-
-
 
 
 if __name__ == "__main__":
