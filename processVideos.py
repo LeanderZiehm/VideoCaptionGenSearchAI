@@ -7,6 +7,11 @@ import cv2
 import json
 import os
 import time
+# import json
+import tempfile
+import shutil
+# import os
+
 
 initTime = time.time()
 
@@ -23,7 +28,7 @@ MAX_VIDEO_COUNT = -1
 MAX_SCENE_COUNT = 5
 
 
-VIDEO_FOLDER = r"V:\zentrale-einrichtungen\Kommunikation u. Marketing\Marketing\Video\25jahre"
+VIDEO_FOLDER = r"V:\zentrale-einrichtungen\Kommunikation u. Marketing\Marketing\Videos\25jahre"
 
 STATIC_PATH = "static/"
 VIDEO_KEYWORDS_FILE = "static/videoKeywordsDatabase.js"
@@ -53,9 +58,7 @@ def main():
         for file in files:
 
             if (processedVideoCount >= MAX_VIDEO_COUNT) and (MAX_VIDEO_COUNT != -1):
-                print(
-                    f"[{MAX_VIDEO_COUNT} processed. Stopping because it's the MAX_VIDEO_COUNT.]"
-                )
+                print(f"[{MAX_VIDEO_COUNT} processed. Stopping because it's the MAX_VIDEO_COUNT.]")
                 stopEarly = True
                 break
 
@@ -76,15 +79,13 @@ def main():
 
                         if "thumbnails" in video and isinstance(video["thumbnails"], list):
                             # Filter out thumbnails that actually exist on disk
-                            existing_thumbnails = [
-                                thumb for thumb in video["thumbnails"] if os.path.exists(thumb)]
+                            existing_thumbnails = [thumb for thumb in video["thumbnails"] if os.path.exists(thumb)]
                         else:
                             existing_thumbnails = []
 
                         # If less than MAX_SCENE_COUNT, regenerate thumbnails
                         if len(existing_thumbnails) < MAX_SCENE_COUNT:
-                            video["thumbnails"] = extract_equally_spaced_frames(
-                                filepath)
+                            video["thumbnails"] = extract_equally_spaced_frames(filepath)
                         else:
                             # Keep valid ones
                             video["thumbnails"] = existing_thumbnails
@@ -96,10 +97,10 @@ def main():
 
                 # if filepath in [video["path"] for video in loadedJsonData]:
 
-                    # video["thumbnails"] = extract_equally_spaced_frames(filepath)
+                # video["thumbnails"] = extract_equally_spaced_frames(filepath)
 
-                    #
-                    # continue
+                #
+                # continue
 
                 print(f"Processing video: {filepath}")
 
@@ -108,9 +109,7 @@ def main():
                     loadedJsonData.append(processedVideoData)
                     saveToJsFile(loadedJsonData)
 
-                    save_info_log(
-                        f"Saved js: {len(loadedJsonData)} | {filepath}"
-                    )
+                    save_info_log(f"Saved js: {len(loadedJsonData)} | {filepath}")
 
                 except Exception as e:
                     # logging.error(f"An error occurred: {str(e)} | {filepath}")
@@ -135,16 +134,16 @@ def removeAllChangedPaths(loadedJsonData, ALL_FILES_PATHS):
     removedVideos = []
 
     for video in loadedJsonData:
-        if video['path'] not in ALL_FILES_PATHS:
+        if video["path"] not in ALL_FILES_PATHS:
             removedVideos.append(video)
 
     for video in removedVideos:
         loadedJsonData.remove(video)
 
     if len(removedVideos) > 0:
-        with open("static/removedVideos.json", 'a') as file:
+        with open("static/removedVideos.json", "a") as file:
             jsonToSave = json.dumps(removedVideos, indent=4)
-            file.write("\n"+jsonToSave)
+            file.write("\n" + jsonToSave)
 
     saveToJsFile(loadedJsonData)
 
@@ -172,7 +171,7 @@ def processVideo(video_path):
     return processedVideoData
 
 
-def
+# def
 
 
 jsPrefix = "var allVideosArray = "
@@ -181,8 +180,22 @@ jsPrefix = "var allVideosArray = "
 def saveToJsFile(jsonData):
     jsonData = json.dumps(jsonData, indent=4)
     jsData = f"{jsPrefix}{jsonData}"
-    with open(VIDEO_KEYWORDS_FILE, "w") as jsFile:
-        jsFile.write(jsData)
+    
+    # Create a temporary file in the same directory
+    dir_name = os.path.dirname(VIDEO_KEYWORDS_FILE) or "."
+    with tempfile.NamedTemporaryFile("w", dir=dir_name, delete=False) as tempFile:
+        tempFile.write(jsData)
+        tempFilePath = tempFile.name  # Store the temp file path
+    
+    # Atomically replace the old file with the new file
+    shutil.move(tempFilePath, VIDEO_KEYWORDS_FILE)
+
+
+# def saveToJsFile(jsonData):
+#     jsonData = json.dumps(jsonData, indent=4)
+#     jsData = f"{jsPrefix}{jsonData}"
+#     with open(VIDEO_KEYWORDS_FILE, "w") as jsFile:
+#         jsFile.write(jsData)
 
 
 def generate_keywords(image_path):
@@ -203,9 +216,7 @@ def generate_keywords(image_path):
 def run_ollama(prompt, imagePath):
     result = ""
 
-    stream = ollama.generate(
-        model=modelName, prompt=prompt, images=[imagePath], stream=True
-    )
+    stream = ollama.generate(model=modelName, prompt=prompt, images=[imagePath], stream=True)
     print("")
     for chunk in stream:
         print(chunk["response"], end="", flush=True)
@@ -216,9 +227,8 @@ def run_ollama(prompt, imagePath):
 
 def extract_equally_spaced_frames(video_path, num_frames=MAX_SCENE_COUNT):
     """Extracts equally spaced frames from a video and returns a list of frame paths."""
-    shortened_video_path = video_path.replace(VIDEO_FOLDER, '', 1)
-    short_cleaned_video_path = re.sub(
-        r'[^A-Za-z0-9_]', '', shortened_video_path)
+    shortened_video_path = video_path.replace(VIDEO_FOLDER, "", 1)
+    short_cleaned_video_path = re.sub(r"[^A-Za-z0-9_]", "", shortened_video_path)
 
     output_dir = PROCESSED_PATH + short_cleaned_video_path
 
@@ -233,8 +243,7 @@ def extract_equally_spaced_frames(video_path, num_frames=MAX_SCENE_COUNT):
 
     total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
     if total_frames < num_frames:
-        print(
-            f"Video has fewer frames than the requested {num_frames} frames.")
+        print(f"Video has fewer frames than the requested {num_frames} frames.")
         return []
 
     frame_indices = np.linspace(0, total_frames - 1, num_frames, dtype=int)
@@ -246,13 +255,10 @@ def extract_equally_spaced_frames(video_path, num_frames=MAX_SCENE_COUNT):
 
         if ret:
             timestamp_ms = cap.get(cv2.CAP_PROP_POS_MSEC)
-            frame_filename = os.path.join(
-                output_dir, f"frame_{i+1:03d}_at_{int(timestamp_ms)}ms.jpg"
-            )
+            frame_filename = os.path.join(output_dir, f"frame_{i+1:03d}_at_{int(timestamp_ms)}ms.jpg")
             cv2.imwrite(frame_filename, frame)
             frame_paths.append(frame_filename)
-            print(
-                f"Frame {i+1} extracted at {int(timestamp_ms)}ms: {frame_filename}")
+            print(f"Frame {i+1} extracted at {int(timestamp_ms)}ms: {frame_filename}")
         else:
             print(f"Failed to extract frame at index {frame_idx}")
 
@@ -267,6 +273,7 @@ def time_function(func):
         end_time = time.time()
         print(f"{func.__name__} took {end_time - start_time:.4f} seconds to run")
         return result
+
     return wrapper
 
 

@@ -7,10 +7,6 @@ import time
 # the other path to the network drive is in processVideos.py
 VIDEO_FOLDER = r"V:\zentrale-einrichtungen\Kommunikation u. Marketing\Marketing\Videos"
 
-CHECK_FOLDER = r"00-Video-Search-Tool_Leander"
-
-checkNetworkDrivePath = os.path.join(VIDEO_FOLDER, CHECK_FOLDER)
-
 
 def run_flask():
     """Runs the Flask application in a separate command prompt."""
@@ -36,5 +32,5 @@ def main_program():
 
 
 if __name__ == "__main__":
-    setupCheck.main(checkNetworkDrivePath)
+    setupCheck.main(VIDEO_FOLDER)
     main_program()
