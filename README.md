@@ -36,6 +36,11 @@ The script also handles various error logging, processes multiple video files in
 
 ### Requirements 📋
 
+
+the code assummes that you coppied the python.exe and renamed to copy to py.exe so it can work
+
+
+
 - **Python 3.x**: The script is written in Python 3 🐍.
 - **External Libraries**:
   - `ollama`: For generating keywords using an AI model (llava) 🤖.
