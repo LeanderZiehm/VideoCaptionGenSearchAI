@@ -7,9 +7,11 @@ import cv2
 import json
 import os
 import time
+
 # import json
 import tempfile
 import shutil
+
 # import os
 
 
@@ -180,13 +182,13 @@ jsPrefix = "var allVideosArray = "
 def saveToJsFile(jsonData):
     jsonData = json.dumps(jsonData, indent=4)
     jsData = f"{jsPrefix}{jsonData}"
-    
+
     # Create a temporary file in the same directory
     dir_name = os.path.dirname(VIDEO_KEYWORDS_FILE) or "."
     with tempfile.NamedTemporaryFile("w", dir=dir_name, delete=False) as tempFile:
         tempFile.write(jsData)
         tempFilePath = tempFile.name  # Store the temp file path
-    
+
     # Atomically replace the old file with the new file
     shutil.move(tempFilePath, VIDEO_KEYWORDS_FILE)
 
@@ -280,7 +282,7 @@ def time_function(func):
 @time_function
 def loadJsonData():
     if OVERRIED_EXISTING or os.path.exists(VIDEO_KEYWORDS_FILE) == False:
-        jsonData = {}
+        jsonData = []
     else:
         with open(VIDEO_KEYWORDS_FILE, "r") as jsFile:
             text = jsFile.read()
