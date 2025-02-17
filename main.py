@@ -18,7 +18,7 @@ def run_videos_every_2_hours():
     while True:
         subprocess.run(["python", "processVideos.py"])
         print("processVideos.py executed. Waiting for 2 hours...")
-        time.sleep(48 * 60 * 60)  # Sleep for 2 hours (2 * 60 * 60 seconds)
+        # time.sleep(48 * 60 * 60)  # Sleep for 2 hours (2 * 60 * 60 seconds)
 
 
 def main_program():
