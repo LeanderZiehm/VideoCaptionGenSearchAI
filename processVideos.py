@@ -30,7 +30,7 @@ MAX_VIDEO_COUNT = -1
 MAX_SCENE_COUNT = 5
 
 
-VIDEO_FOLDER = r"V:\zentrale-einrichtungen\Kommunikation u. Marketing\Marketing\Videos\25jahre"
+VIDEO_FOLDER = r"V:\zentrale-einrichtungen\Kommunikation u. Marketing\Marketing\Videos"
 
 STATIC_PATH = "static/"
 VIDEO_KEYWORDS_FILE = "static/videoKeywordsDatabase.js"
