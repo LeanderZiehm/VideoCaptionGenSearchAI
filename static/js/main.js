@@ -1,4 +1,4 @@
-let MAX_VIDEOS_PER_PAGE = 30;
+let MAX_VIDEOS_PER_PAGE = 10;
 
 const videoResults = document.getElementById("video-results");
 
