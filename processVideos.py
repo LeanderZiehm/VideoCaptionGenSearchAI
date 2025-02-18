@@ -46,7 +46,7 @@ def main():
     processedVideoCount = 0
     skippedVideoCount = 0
     errors = []
-    ALL_FILES_PATHS = []
+    # ALL_FILES_PATHS = []
 
     stopEarly = False
 
@@ -67,7 +67,7 @@ def main():
             if any(file.lower().endswith(ext) for ext in video_formats):
                 filepath = os.path.join(subdir, file)
 
-                ALL_FILES_PATHS.append(filepath)
+                # ALL_FILES_PATHS.append(filepath)
 
                 filePathWasAlreaySaved = False
 
@@ -122,7 +122,7 @@ def main():
 
     print(f"skippedVideoCount: {skippedVideoCount}")
 
-    removeAllChangedPaths(loadedJsonData, ALL_FILES_PATHS)
+    # removeAllChangedPaths(loadedJsonData, ALL_FILES_PATHS)
 
     print(f"Processed {processedVideoCount} videos.")
     print(f"Erorrs: {errors}")
@@ -132,24 +132,24 @@ def main():
     print(f"Total Time: {time.time() - initTime}")
 
 
-def removeAllChangedPaths(loadedJsonData, ALL_FILES_PATHS):
-    removedVideos = []
+# def removeAllChangedPaths(loadedJsonData, ALL_FILES_PATHS):
+#     removedVideos = []
 
-    for video in loadedJsonData:
-        if video["path"] not in ALL_FILES_PATHS:
-            removedVideos.append(video)
+#     for video in loadedJsonData:
+#         if video["path"] not in ALL_FILES_PATHS:
+#             removedVideos.append(video)
 
-    for video in removedVideos:
-        loadedJsonData.remove(video)
+#     for video in removedVideos:
+#         loadedJsonData.remove(video)
 
-    if len(removedVideos) > 0:
-        with open("static/removedVideos.json", "a") as file:
-            jsonToSave = json.dumps(removedVideos, indent=4)
-            file.write("\n" + jsonToSave)
+#     if len(removedVideos) > 0:
+#         with open("static/removedVideos.json", "a") as file:
+#             jsonToSave = json.dumps(removedVideos, indent=4)
+#             file.write("\n" + jsonToSave)
 
-    saveToJsFile(loadedJsonData)
+#     saveToJsFile(loadedJsonData)
 
-    print(f"######## Removed {len(removedVideos)} videos###: {removedVideos}")
+#     print(f"######## Removed {len(removedVideos)} videos###: {removedVideos}")
 
 
 def processVideo(video_path):
